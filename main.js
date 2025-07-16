@@ -73,9 +73,9 @@ const AI_CONFIG = {
         hasServerlessAPI: false
     },
     
-    // Rate limiting for API calls
+    // Rate limiting for API calls (OpenRouter has generous limits)
     rateLimit: {
-        maxCallsPerMinute: 10,
+        maxCallsPerMinute: 20, // Increased for OpenRouter
         callHistory: [],
         lastReset: Date.now()
     },
@@ -83,6 +83,10 @@ const AI_CONFIG = {
     // CORS handling for cross-origin requests (GitHub Pages -> Vercel API)
     corsMode: 'cors',
     credentials: 'omit',  // Don't send cookies cross-origin
+    
+    // OpenRouter configuration
+    timeout: 30000, // Increased to 30 seconds for OpenRouter's slower models
+    retryAttempts: 2,
     
     // Topics for AI fact generation
     cosmicTopics: [
@@ -412,7 +416,7 @@ function updateEducationalContent() {
     if (!educationalPanel || isLoadingFact) return;
     
     const fact = cosmicFacts[currentFactIndex];
-    const isPremiumAI = fact.source && fact.source.includes('Hugging Face');
+    const isPremiumAI = fact.source && fact.source.includes('OpenRouter');
     const isCurated = !fact.source || fact.source.includes('Curated') || fact.source.includes('Enhanced Static');
     
     let sourceLabel = '';
@@ -955,7 +959,7 @@ async function initializeAIFeatures() {
     let detailMessage = '🌌 Journey through space with Ultra visuals\n';
     
     if (hasAPI) {
-        detailMessage += '⭐ PREMIUM: Secure Hugging Face AI integration\n📡 Real AI-powered cosmic education\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
+        detailMessage += '⭐ PREMIUM: Secure OpenRouter AI integration\n📡 Real AI-powered cosmic education (Moonshot AI - Kimi K2)\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
         AI_CONFIG.mode = 'hybrid';
     } else {
         detailMessage += '📚 CURATED: High-quality space facts\n🔬 Scientifically accurate content\n✨ No internet required\n📖 Expertly crafted educational content\n';
@@ -985,7 +989,7 @@ async function initializeAISystem() {
         for (const topic of testTopics) {
             try {
                 const fact = await generateCosmicFact(topic);
-                if (fact && fact.source.includes('Hugging Face')) {
+                if (fact && fact.source.includes('OpenRouter')) {
                     apiCount++;
                 }
                 // Small delay between generations
@@ -1000,7 +1004,7 @@ async function initializeAISystem() {
             AI_CONFIG.apiStatus.isWorking = true;
             showDetailedNotification(
                 '⭐ Premium AI Ready!', 
-                `✅ Secure Hugging Face API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active\n⚡ Premium fact generation ready\n📚 High-quality curated content available`,
+                `✅ Secure OpenRouter API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active (Moonshot AI - Kimi K2)\n⚡ Premium fact generation ready\n📚 High-quality curated content available\n⏱️ Response time: 15-30 seconds`,
                 4000
             );
         } else {
@@ -1052,8 +1056,8 @@ async function tryGenerateWithFreeAPIs(prompt, topic) {
     }
 }
 
-// Secure serverless API call - updated for cross-origin requests
-async function callServerlessAPI(topic) {
+// Secure serverless API call - updated for OpenRouter with retry logic
+async function callServerlessAPI(topic, attempt = 1) {
     try {
         const response = await fetch(AI_CONFIG.serverlessEndpoint, {
             method: 'POST',
@@ -1066,8 +1070,8 @@ async function callServerlessAPI(topic) {
                 'Origin': window.location.origin
             },
             body: JSON.stringify({ topic }),
-            // Add timeout to prevent hanging
-            signal: AbortSignal.timeout(15000) // 15 second timeout
+            // Updated timeout for OpenRouter (some models can be slower)
+            signal: AbortSignal.timeout(AI_CONFIG.timeout) // 30 second timeout
         });
         
         if (!response.ok) {
@@ -1075,7 +1079,7 @@ async function callServerlessAPI(topic) {
             if (response.status === 429) {
                 throw new Error('Rate limit exceeded - please wait before generating more facts');
             } else if (response.status >= 500) {
-                throw new Error('Server error - API temporarily unavailable');
+                throw new Error('Server error - OpenRouter API temporarily unavailable');
             } else {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -1091,9 +1095,10 @@ async function callServerlessAPI(topic) {
                 title: result.fact.title,
                 content: result.fact.content,
                 physics: result.fact.physics,
-                source: 'Hugging Face AI (Secure)',
+                source: 'OpenRouter AI (Moonshot AI - Kimi K2)',
                 timestamp: new Date().toISOString(),
-                quality: 'premium'
+                quality: 'premium',
+                generationTime: result.generationTime || 'N/A'
             };
         } else if (result.fallback) {
             // Server suggests using fallback
@@ -1103,7 +1108,21 @@ async function callServerlessAPI(topic) {
         }
         
     } catch (error) {
-        console.log('API Error:', error.message); // Keep essential error logging
+        // Handle timeout specifically
+        if (error.name === 'TimeoutError' || error.message.includes('timed out')) {
+            if (attempt < AI_CONFIG.retryAttempts) {
+                console.log(`OpenRouter timeout (attempt ${attempt}), retrying...`);
+                // Show user that we're retrying
+                showFactLoadingStateWithRetry(attempt);
+                return await callServerlessAPI(topic, attempt + 1);
+            } else {
+                console.log('OpenRouter API timeout after retries - using fallback content');
+                AI_CONFIG.apiStatus.errorCount++;
+                return null;
+            }
+        }
+        
+        console.log('OpenRouter API Error:', error.message); // Keep essential error logging
         AI_CONFIG.apiStatus.errorCount++;
         
         // Handle specific error types
@@ -1111,6 +1130,13 @@ async function callServerlessAPI(topic) {
             AI_CONFIG.apiStatus.hasServerlessAPI = false;
         } else if (error.message.includes('CORS')) {
             AI_CONFIG.apiStatus.hasServerlessAPI = false;
+        }
+        
+        // Retry on server errors (but not on client errors)
+        if (error.message.includes('Server error') && attempt < AI_CONFIG.retryAttempts) {
+            console.log(`Server error (attempt ${attempt}), retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            return await callServerlessAPI(topic, attempt + 1);
         }
         
         return null;
@@ -1223,9 +1249,34 @@ function showFactLoadingState() {
             <div style="font-size: 24px; margin-bottom: 15px;">⭐</div>
             <h3 style="margin: 0 0 10px 0; color: #64b5f6;">Generating Premium Fact...</h3>
             <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
-                <div style="width: 0%; height: 100%; background: #64b5f6; border-radius: 2px; animation: loading 1s ease-in-out;" id="loading-bar"></div>
+                <div style="width: 0%; height: 100%; background: #64b5f6; border-radius: 2px; animation: loading 2s ease-in-out;" id="loading-bar"></div>
             </div>
-            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure Hugging Face API...</p>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure OpenRouter API (Moonshot AI - Kimi K2)...</p>
+            <p style="margin: 5px 0 0 0; font-size: 10px; color: #999;">This may take 15-30 seconds for high quality AI generation</p>
+        </div>
+        <style>
+            @keyframes loading {
+                0% { width: 0%; }
+                25% { width: 30%; }
+                50% { width: 60%; }
+                75% { width: 85%; }
+                100% { width: 100%; }
+            }
+        </style>
+    `;
+}
+
+function showFactLoadingStateWithRetry(attempt) {
+    if (!educationalPanel) return;
+
+    educationalPanel.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+            <h3 style="margin: 0 0 10px 0; color: #ff9800;">Retrying OpenRouter API (Attempt ${attempt})...</h3>
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                <div style="width: 0%; height: 100%; background: #ff9800; border-radius: 2px; animation: loading 1s ease-in-out;" id="loading-bar"></div>
+            </div>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Attempting to connect to OpenRouter API...</p>
         </div>
         <style>
             @keyframes loading {
@@ -1331,11 +1382,12 @@ function init(fragmentShader) {
             let title, content;
             
             if (AI_CONFIG.apiStatus.hasServerlessAPI) {
-                title = '⭐ Premium AI System';
-                content = `⭐ Secure Hugging Face API integration
+                title = '⭐ Premium OpenRouter AI System';
+                content = `⭐ Secure OpenRouter API integration
 🔒 API keys safely secured on server
-📡 Real AI language model (${AI_CONFIG.rateLimit.maxCallsPerMinute}/min limit)
-🎯 High-quality fact generation
+📡 Real AI language model - Moonshot AI - Kimi K2
+🎯 High-quality fact generation (${AI_CONFIG.rateLimit.maxCallsPerMinute}/min limit)
+⏱️ Response time: 15-30 seconds per fact
 📚 Curated content backup
 🌟 Best cosmic education experience`;
             } else {
@@ -1358,9 +1410,11 @@ function init(fragmentShader) {
             
             let statusText = `🔍 System Status:
 Mode: ${AI_CONFIG.mode.toUpperCase()}
-Premium API: ${status.hasServerlessAPI ? '✅ Available' : '❌ Unavailable'}
+OpenRouter API: ${status.hasServerlessAPI ? '✅ Available' : '❌ Unavailable'}
 Error Count: ${status.errorCount}
-Using Fallback: ${status.usingFallback ? 'Yes (Curated Content)' : 'No'}`;
+Using Fallback: ${status.usingFallback ? 'Yes (Curated Content)' : 'No'}
+Timeout Setting: ${AI_CONFIG.timeout / 1000}s
+Retry Attempts: ${AI_CONFIG.retryAttempts}`;
 
             if (status.hasServerlessAPI) {
                 statusText += `\nAPI Calls Remaining: ${remainingCalls}/${rateLimit.maxCallsPerMinute}`;
@@ -1395,7 +1449,7 @@ Using Fallback: ${status.usingFallback ? 'Yes (Curated Content)' : 'No'}`;
         `;
         
         const aiModeText = AI_CONFIG.apiStatus.hasServerlessAPI 
-            ? '⭐ Premium AI active!' 
+            ? '⭐ OpenRouter AI active!' 
             : '📚 Curated content active!';
             
         instructions.innerHTML = `
