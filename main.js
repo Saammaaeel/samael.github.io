@@ -54,7 +54,7 @@ let factCache = new Map();
 const AI_CONFIG = {
     // Secure API endpoint (deployed separately on Vercel/Netlify)
     // Update this URL when you deploy your serverless function
-    serverlessEndpoint: 'https://cosmic-wanderer-sandy.vercel.app/api/generate-fact', // CHANGE THIS TO YOUR DEPLOYED URL
+    serverlessEndpoint: 'https://cosmic-wanderer-eosin.vercel.app/api/generate-fact', // CHANGE THIS TO YOUR DEPLOYED URL
     
     // Alternative: Auto-detect based on current domain
     // serverlessEndpoint: window.location.hostname.includes('github.io') 
