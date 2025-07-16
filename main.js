@@ -349,40 +349,66 @@ async function generateCosmicFact(topic = null) {
     isLoadingFact = true;
     showFactLoadingState();
     
+    // Safety timeout to prevent getting stuck
+    const safetyTimeout = setTimeout(() => {
+        console.log('Safety timeout: Forcing end of loading state');
+        isLoadingFact = false;
+        hideFactLoadingState();
+        showDetailedNotification(
+            '⚠️ Generation Timeout', 
+            'Taking longer than expected. Using curated content instead.',
+            3000
+        );
+    }, 45000); // 45 second safety timeout
+    
     try {
         // Select random topic if none provided
         if (!topic) {
             topic = AI_CONFIG.cosmicTopics[Math.floor(Math.random() * AI_CONFIG.cosmicTopics.length)];
         }
         
+        console.log('Starting fact generation for topic:', topic);
+        
         // Check cache first
         if (factCache.has(topic)) {
+            console.log('Using cached fact for topic:', topic);
             const cachedFact = factCache.get(topic);
+            clearTimeout(safetyTimeout);
             isLoadingFact = false;
             return cachedFact;
         }
         
         // Generate prompt for cosmic fact
         const prompt = createCosmicFactPrompt(topic);
+        console.log('Generated prompt, calling API...');
         
         // Try different free APIs
         let fact = await tryGenerateWithFreeAPIs(prompt, topic);
         
+        console.log('API response received:', fact ? 'Success' : 'Failed');
+        
         if (fact) {
             // Cache the generated fact
             factCache.set(topic, fact);
+            clearTimeout(safetyTimeout);
+            console.log('Fact generated successfully:', fact.title);
             return fact;
         } else {
             // Fallback to enhanced static facts
+            console.log('API failed, using enhanced static fact');
+            clearTimeout(safetyTimeout);
             return generateEnhancedStaticFact(topic);
         }
         
     } catch (error) {
         console.warn('AI fact generation failed, using enhanced static content:', error);
+        clearTimeout(safetyTimeout);
         return generateEnhancedStaticFact(topic);
     } finally {
         isLoadingFact = false;
         hideFactLoadingState();
+        clearTimeout(safetyTimeout);
+        console.log('Fact generation process completed');
     }
 }
 
@@ -397,7 +423,10 @@ function createCosmicFactPrompt(topic) {
 
 // --- Enhanced Educational Panel Functions ---
 async function generateNewFact() {
-    if (isLoadingFact) return;
+    if (isLoadingFact) {
+        console.log('Already loading a fact, ignoring new request');
+        return;
+    }
     
     const newFact = await generateCosmicFact();
     if (newFact) {
@@ -410,6 +439,28 @@ async function generateNewFact() {
             toggleEducationalPanel();
         }
     }
+}
+
+// Force refresh function if generation gets stuck
+function forceRefreshFacts() {
+    console.log('Force refreshing fact generation system');
+    
+    // Reset all loading states
+    isLoadingFact = false;
+    hideFactLoadingState();
+    
+    // Reset API status
+    AI_CONFIG.apiStatus.errorCount = 0;
+    AI_CONFIG.apiStatus.usingFallback = false;
+    
+    // Show current fact or generate new one
+    updateEducationalContent();
+    
+    showDetailedNotification(
+        '🔄 System Refreshed', 
+        'Fact generation system has been reset.\nTry generating a new fact now!',
+        3000
+    );
 }
 
 function updateEducationalContent() {
@@ -454,7 +505,18 @@ function updateEducationalContent() {
                     font-size: 11px;
                     cursor: pointer;
                     font-weight: bold;
+                    margin-right: 5px;
                 ">⭐ Generate Premium Fact</button>
+                <button onclick="forceRefreshFacts()" style="
+                    background: linear-gradient(45deg, #ff9800, #f57c00);
+                    border: none;
+                    padding: 5px 10px;
+                    border-radius: 15px;
+                    color: white;
+                    font-size: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">🔄 Refresh</button>
             </div>
             <div style="margin-top: 8px; text-align: center; font-size: 0.7em; color: #888;">
                 Swipe left/right for more • ${statusText}
@@ -465,6 +527,7 @@ function updateEducationalContent() {
 
 // Make generateNewFact available globally
 window.generateNewFact = generateNewFact;
+window.forceRefreshFacts = forceRefreshFacts;
 
 function toggleEducationalPanel() {
     if (!educationalPanel) return;
@@ -959,7 +1022,7 @@ async function initializeAIFeatures() {
     let detailMessage = '🌌 Journey through space with Ultra visuals\n';
     
     if (hasAPI) {
-        detailMessage += '⭐ PREMIUM: Secure OpenRouter AI integration\n📡 Real AI-powered cosmic education (Moonshot AI - Kimi K2)\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
+        detailMessage += '⭐ PREMIUM: Secure OpenRouter AI integration\n📡 Real AI-powered cosmic education (Moonshot AI Kimi K2)\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
         AI_CONFIG.mode = 'hybrid';
     } else {
         detailMessage += '📚 CURATED: High-quality space facts\n🔬 Scientifically accurate content\n✨ No internet required\n📖 Expertly crafted educational content\n';
@@ -1004,7 +1067,7 @@ async function initializeAISystem() {
             AI_CONFIG.apiStatus.isWorking = true;
             showDetailedNotification(
                 '⭐ Premium AI Ready!', 
-                `✅ Secure OpenRouter API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active (Moonshot AI - Kimi K2)\n⚡ Premium fact generation ready\n📚 High-quality curated content available\n⏱️ Response time: 15-30 seconds`,
+                `✅ Secure OpenRouter API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active (Moonshot AI Kimi K2)\n⚡ Premium fact generation ready\n📚 High-quality curated content available\n⏱️ Response time: 15-30 seconds`,
                 4000
             );
         } else {
@@ -1059,6 +1122,8 @@ async function tryGenerateWithFreeAPIs(prompt, topic) {
 // Secure serverless API call - updated for OpenRouter with retry logic
 async function callServerlessAPI(topic, attempt = 1) {
     try {
+        console.log(`OpenRouter API call attempt ${attempt} for topic:`, topic);
+        
         const response = await fetch(AI_CONFIG.serverlessEndpoint, {
             method: 'POST',
             mode: AI_CONFIG.corsMode, // 'cors' for cross-origin requests
@@ -1074,6 +1139,8 @@ async function callServerlessAPI(topic, attempt = 1) {
             signal: AbortSignal.timeout(AI_CONFIG.timeout) // 30 second timeout
         });
         
+        console.log('OpenRouter API response status:', response.status);
+        
         if (!response.ok) {
             // Handle different HTTP error codes
             if (response.status === 429) {
@@ -1086,30 +1153,36 @@ async function callServerlessAPI(topic, attempt = 1) {
         }
         
         const result = await response.json();
+        console.log('OpenRouter API result:', result);
         
         if (result.success && result.fact) {
             // Track successful API call
             trackAPICall();
             
+            console.log('Successfully parsed OpenRouter response:', result.fact.title);
+            
             return {
                 title: result.fact.title,
                 content: result.fact.content,
                 physics: result.fact.physics,
-                source: 'OpenRouter AI (Moonshot AI - Kimi K2)',
+                source: `OpenRouter AI (${result.metadata?.model || 'Moonshot AI Kimi K2'})`,
                 timestamp: new Date().toISOString(),
                 quality: 'premium',
-                generationTime: result.generationTime || 'N/A'
+                generationTime: result.metadata?.tokens_used || 'N/A'
             };
         } else if (result.fallback) {
             // Server suggests using fallback
+            console.log('Server suggested fallback, debug info:', result.debug);
             throw new Error('Server suggested fallback');
         } else {
+            console.log('Invalid response format:', result);
             throw new Error('Invalid response format');
         }
         
     } catch (error) {
         // Handle timeout specifically
         if (error.name === 'TimeoutError' || error.message.includes('timed out')) {
+            console.log(`OpenRouter timeout on attempt ${attempt}:`, error.message);
             if (attempt < AI_CONFIG.retryAttempts) {
                 console.log(`OpenRouter timeout (attempt ${attempt}), retrying...`);
                 // Show user that we're retrying
@@ -1251,7 +1324,7 @@ function showFactLoadingState() {
             <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
                 <div style="width: 0%; height: 100%; background: #64b5f6; border-radius: 2px; animation: loading 2s ease-in-out;" id="loading-bar"></div>
             </div>
-            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure OpenRouter API (Moonshot AI - Kimi K2)...</p>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure OpenRouter API (Moonshot AI Kimi K2)...</p>
             <p style="margin: 5px 0 0 0; font-size: 10px; color: #999;">This may take 15-30 seconds for high quality AI generation</p>
         </div>
         <style>
@@ -1363,7 +1436,8 @@ function init(fragmentShader) {
                 updateEducationalContent();
                 showDetailedNotification('AI Facts Cleared', '🧹 Removed generated facts\n📚 Restored to original content');
             }
-        }
+        },
+        forceRefresh: () => forceRefreshFacts()
     };
     
     const eduFolder = gui.addFolder('📚 Cosmic Education');
@@ -1375,6 +1449,7 @@ function init(fragmentShader) {
     const aiFolder = eduFolder.addFolder('🤖 AI Generation');
     aiFolder.add(education_controls, 'generateAIFact').name('Generate New Fact');
     aiFolder.add(education_controls, 'clearAIFacts').name('Clear AI Facts');
+    aiFolder.add(education_controls, 'forceRefresh').name('Force Refresh Facts');
     
     // Add info about AI features
     const aiInfo = {
@@ -1385,7 +1460,7 @@ function init(fragmentShader) {
                 title = '⭐ Premium OpenRouter AI System';
                 content = `⭐ Secure OpenRouter API integration
 🔒 API keys safely secured on server
-📡 Real AI language model - Moonshot AI - Kimi K2
+📡 Real AI language model - Moonshot AI Kimi K2
 🎯 High-quality fact generation (${AI_CONFIG.rateLimit.maxCallsPerMinute}/min limit)
 ⏱️ Response time: 15-30 seconds per fact
 📚 Curated content backup
