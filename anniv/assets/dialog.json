@@ -42,7 +42,7 @@
                 {
                     "content": "i love you more",
                     "nextAuthor": [
-                        "0003"
+                        "0002"
                     ]
                 }
             ]
@@ -55,6 +55,9 @@
                     "i love u the most moyyy",
 					"-Ndut"
                 ]
+            ],
+            "nextAuthor": [
+                "0003"
             ]
         },
         {

@@ -303,9 +303,11 @@ and just may be in one of them, i do get to touch you.`
                     if (lowerMessage === 'poem1' || lowerMessage.includes('first poem')) {
                         content = LOVE_NOTES.poem1;
                         msg.isPoem = true;
+                        isTyping = false; // Poems appear instantly
                     } else if (lowerMessage === 'poem2' || lowerMessage.includes('second poem')) {
                         content = LOVE_NOTES.poem2;
                         msg.isPoem = true;
+                        isTyping = false; // Poems appear instantly
                     }
 
                     // Check for particle effects
@@ -334,7 +336,12 @@ and just may be in one of them, i do get to touch you.`
 
                 const length = content.replace(/<[^>]+>/g,"").length;
                 const isImg = /<img[^>]+>/.test(content);
-                const isTyping = length > 2 || isImg;
+                let isTyping = length > 2 || isImg;
+
+                // Memory game questions appear instantly too
+                if (content.includes('Memory Game Time') || content.includes('Which song did You play')) {
+                    isTyping = false;
+                }
 
                 const msg = {
                     author: author,
