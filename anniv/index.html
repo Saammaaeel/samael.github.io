@@ -18,33 +18,27 @@
                     <div id="mock-msg-row" class="msg-row">
                         <div id="mock-msg" class="msg" v-html="latestMsgContent"></div>
                     </div>
-                    <div class="msg-group msg-group-slide-in"
-                        v-for="(group, groupIndex) in messageGroups"
-                        :key="groupIndex"
-                        :class="group.author === 'author' ? 'msg-author' : 'msg-me'"
-                        :style="`animation-delay: ${groupIndex * 0.1}s`">
+                    <div class="msg-row"
+                        v-for="(msg, index) in messages"
+                        :key="index"
+                        :class="msg.author === 'author' ? 'msg-author' : 'msg-me'"
+                        :style="`animation-delay: ${index * 0.05}s`">
                         <div class="avatar">
-                            <img :src="'/anniv/' + (group.author === 'author' ? 'bubu.jpg' : 'dudu.jpg')" :alt="group.author" />
+                            <img :src="'/anniv/' + (msg.author === 'author' ? 'bubu.jpg' : 'dudu.jpg')" :alt="msg.author" />
                         </div>
-                        <div class="msg-container">
-                            <div class="msg-row"
-                                v-for="(msg, msgIndex) in group.messages"
-                                :key="msgIndex">
-                                <div class="msg-wrapper">
-                                    <div class="msg"
-                                        :class="'msg-bounce-in-' + (group.author === 'author' ? 'left': 'right')"
-                                        v-html="msg.content"></div>
-                                    <div class="msg-reactions" v-if="!msg.isTyping">
-                                        <button class="reaction-btn" @click="addReaction(msg, '❤️')" :class="{active: msg.reactions && msg.reactions.includes('❤️')}">❤️</button>
-                                        <button class="reaction-btn" @click="addReaction(msg, '👍')" :class="{active: msg.reactions && msg.reactions.includes('👍')}">👍</button>
-                                        <button class="reaction-btn" @click="addReaction(msg, '😂')" :class="{active: msg.reactions && msg.reactions.includes('😂')}">😂</button>
-                                    </div>
-                                    <div class="msg-reaction-display" v-if="msg.reactions && msg.reactions.length > 0">
-                                        <span v-for="reaction in msg.reactions" :key="reaction">{{ reaction }}</span>
-                                    </div>
-                                </div>
+                        <div class="msg-wrapper">
+                            <div class="msg"
+                                :class="'msg-bounce-in-' + (msg.author === 'author' ? 'left': 'right')"
+                                v-html="msg.content"></div>
+                            <div class="msg-reactions" v-if="!msg.isTyping">
+                                <button class="reaction-btn" @click="addReaction(msg, '❤️')" :class="{active: msg.reactions && msg.reactions.includes('❤️')}">❤️</button>
+                                <button class="reaction-btn" @click="addReaction(msg, '👍')" :class="{active: msg.reactions && msg.reactions.includes('👍')}">👍</button>
+                                <button class="reaction-btn" @click="addReaction(msg, '😂')" :class="{active: msg.reactions && msg.reactions.includes('😂')}">😂</button>
                             </div>
-                            <div class="msg-timestamp" v-if="!group.messages.some(m => m.isTyping)">{{ formatTimestamp(group.timestamp) }}</div>
+                            <div class="msg-reaction-display" v-if="msg.reactions && msg.reactions.length > 0">
+                                <span v-for="reaction in msg.reactions" :key="reaction">{{ reaction }}</span>
+                            </div>
+                            <div class="msg-timestamp" v-if="!msg.isTyping">{{ formatTimestamp(msg.timestamp) }}</div>
                         </div>
                     </div>
                 </div>

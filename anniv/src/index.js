@@ -76,31 +76,6 @@
             latestMsgContent: null
         },
 
-        computed: {
-            messageGroups() {
-                const groups = [];
-                let currentGroup = null;
-
-                this.messages.forEach(msg => {
-                    if (!currentGroup || currentGroup.author !== msg.author || msg.isTyping) {
-                        // Start a new group
-                        currentGroup = {
-                            author: msg.author,
-                            messages: [msg],
-                            timestamp: msg.timestamp
-                        };
-                        groups.push(currentGroup);
-                    } else {
-                        // Add to current group
-                        currentGroup.messages.push(msg);
-                        // Update timestamp to latest message
-                        currentGroup.timestamp = msg.timestamp;
-                    }
-                });
-
-                return groups;
-            }
-        },
 
         mounted() {
             $.getJSON('/anniv/assets/dialog.json', data => {
