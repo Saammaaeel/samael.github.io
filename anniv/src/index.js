@@ -61,7 +61,7 @@ and just may be in one of them, i do get to touch you.`
         if (!backgroundMusic) {
             backgroundMusic = new Audio('/anniv/moon.mp3');
             backgroundMusic.loop = true;
-            backgroundMusic.volume = 0.85;
+            backgroundMusic.volume = 0.50;
             backgroundMusic.preload = 'auto'; // Preload the audio file
             
             // Add error handling for file not found
