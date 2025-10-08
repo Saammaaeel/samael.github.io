@@ -4,8 +4,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>1 new message</title>
-        <link href="css/main.min.css" rel="stylesheet" type="text/css">
-        <link rel="shortcut icon" href="star.ico"/>
+        <link href="/anniv/css/main.min.css" rel="stylesheet" type="text/css">
+        <link rel="shortcut icon" href="/anniv/star.ico"/>
     </head>
     <body>
         <div id="mobile" :class="{ 'has-prompt': hasPrompt }">
@@ -33,7 +33,7 @@
                 <div id="prompt">
                     <div id="prompt-head">
                         <div class="say-something">Reply……</div>
-                        <a href="javascript:;" class="close-btn"
+                        <a href="javascript:;" class="close-btn" title="Close"
                             v-on:click="togglePrompt(false)"></a>
                     </div>
                     <div id="prompt-body">
@@ -65,6 +65,6 @@
         <script src="https://cdn.bootcss.com/zepto/1.2.0/zepto.min.js"></script>
         <script src="https://cdn.bootcss.com/vue/2.2.6/vue.min.js"></script>
         
-        <script src="js/index-min.js"></script>
+        <script src="/anniv/js/index-min.js"></script>
     </body>
 </html>

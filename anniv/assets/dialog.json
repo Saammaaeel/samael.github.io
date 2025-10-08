@@ -1,0 +1,84 @@
+{
+    "fromMe": [
+        {
+            "id": "0000",
+            "details": [
+                [
+                    "aloo moy",
+                    "sooo how was it?",
+                    "that we're finally back together again after 1 year~ish of separation",
+                    "aku gk nyangka kalo kita bisa balik lagi",
+                    "so yes",
+                    "i just want to celebrate this moment with you",
+                    "did u know why i celebrate this?",
+                    "i mean if u havent forgot it already, it's 15th of October",
+                    "it's our first date",
+					"well at that time it was kinda awkward",
+					"but i'm glad we made it through",
+                    "yaa walaupun kita pada akhirnya putus krn kesalahan ku dan ketidak dewasaanku",
+					"jujur perasaanku skrg itu bahagia pake bgt, ku gk nyangka kl kamu bakal balik lg",
+                    "aku tu mau bikin pop up surat gitu moy tp belum nemu caranya jadi dari sini ajaya :)",
+                    "jaadi selamat anniv sayaang! finally lah ya sesudah 1,5 taun struggling, kamu berusaha buat ngehubungin aku lg.",
+                    "Kaya kita gatau apa yang masa depan siapin buat kita, but i trust u moy.",
+                    "u r a strong kind and independent woman yang aku yakin bisa hadapin semua yang semesta lempar sama kamu.",
+                    "aku bakal selalu disini support semua pilihan2mu moyyy. Aku bakal berusaha sebisaku buat cari kerja dan balik nemuin kamu wkwkwwk.", 
+                    "so that we can do all the plans we talked abt. Go see the world together, live with each other, just us against the world no?.", 
+                    "maaf aku gabisa ada disana, jadi sebagai kompensasi aku coba buat ini :) i think its gonna be cute tapi gk tau ya menurut kamu wkwkwkw.", 
+                    "thanks tho for giving me a shot, i appreciate u moyyy and i want the best for a girl like u because u so paking deserve it.", 
+                    "aku bakal coba sebaik yang aku bisa ya moyyy, karena aku mau yang kita jalanin sekarang ini terus sampe kapanpun.", 
+                    "ill try to be the best partner u can get, take a chance with me yes?", 
+                    "for now just enjoy this moment yaaa! dan maaf if its cringe as hell but idgaf wkwkwkw, im looking forward to meeting u babe, cheers!",
+                    "ah lupa",
+                    "i love u moyyy"
+                ]
+            ],
+            "responses": [
+                {
+                    "content": "i love u too",
+                    "nextAuthor": [
+                        "0001"
+                    ]
+                },
+                {
+                    "content": "i love you more",
+                    "nextAuthor": [
+                        "0002"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "0002",
+            "details": [
+                [                    
+                    "🥹",
+                    "i love u the most moyyy",
+					"-Ndut"
+                ]
+            ]
+        },
+        {
+            "id": "0001",
+            "details": [
+                [
+                    "bukan yang ituuuu😡😡😡"
+                ]
+            ],
+            "responses": [
+                {
+                    "content": "i love u more",
+                    "nextAuthor": [
+                        "0002"
+                    ]
+                },
+                {
+                    "content": "i love u more",
+                    "nextAuthor": [
+                        "0002"
+                    ]
+                }
+            ]
+        }
+    ],
+    "fromUser": []
+}
