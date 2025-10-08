@@ -295,20 +295,17 @@
             sendFriendMsg(message, author) {
                 let content = getRandomMsg(message);
 
-                // Handle special commands
+                // Handle special commands and dialog content
                 if (typeof message === 'string') {
                     const lowerMessage = message.toLowerCase().trim();
 
-                    // Check for memory game questions
-                    if (MEMORY_GAME[lowerMessage]) {
-                        content = MEMORY_GAME[lowerMessage];
-                    }
-
-                    // Check for poem commands
+                    // Check for poem commands (from dialog or direct commands)
                     if (lowerMessage === 'poem1' || lowerMessage.includes('first poem')) {
                         content = LOVE_NOTES.poem1;
+                        msg.isPoem = true;
                     } else if (lowerMessage === 'poem2' || lowerMessage.includes('second poem')) {
                         content = LOVE_NOTES.poem2;
+                        msg.isPoem = true;
                     }
 
                     // Check for particle effects

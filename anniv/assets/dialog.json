@@ -42,7 +42,7 @@
                 {
                     "content": "i love you more",
                     "nextAuthor": [
-                        "0002"
+                        "0003"
                     ]
                 }
             ]
@@ -50,10 +50,79 @@
         {
             "id": "0002",
             "details": [
-                [                    
+                [
                     "🥹",
                     "i love u the most moyyy",
 					"-Ndut"
+                ]
+            ]
+        },
+        {
+            "id": "0003",
+            "details": [
+                [
+                    "poem1"
+                ]
+            ],
+            "nextAuthor": [
+                "0004"
+            ]
+        },
+        {
+            "id": "0004",
+            "details": [
+                [
+                    "💝 Memory Game Time! 💝",
+                    "Which song did You play for my birthday? 🎵",
+                    "Choose one:",
+                    "1. PS I Love You by Paul Partohap",
+                    "2. I Love You 3000"
+                ]
+            ],
+            "responses": [
+                {
+                    "content": "1",
+                    "nextAuthor": [
+                        "0005"
+                    ]
+                },
+                {
+                    "content": "PS I Love You by Paul Partohap",
+                    "nextAuthor": [
+                        "0005"
+                    ]
+                },
+                {
+                    "content": "2",
+                    "nextAuthor": [
+                        "0006"
+                    ]
+                },
+                {
+                    "content": "I Love You 3000",
+                    "nextAuthor": [
+                        "0006"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "0005",
+            "details": [
+                [
+                    "🎉 Correct! You remembered! 🎉",
+                    "poem2"
+                ]
+            ]
+        },
+        {
+            "id": "0006",
+            "details": [
+                [
+                    "😅 Almost! But that's not the song...",
+                    "The correct answer was 'PS I Love You by Paul Partohap'",
+                    "But don't worry, you still get a special surprise! 💕",
+                    "poem2"
                 ]
             ]
         },
