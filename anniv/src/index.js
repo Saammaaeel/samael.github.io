@@ -56,6 +56,42 @@ and just may be in one of them, i do get to touch you.`
         }
     }
 
+    // Create starry night background
+    function createStarryNight() {
+        const starsContainer = document.createElement('div');
+        starsContainer.className = 'stars';
+        document.body.insertBefore(starsContainer, document.body.firstChild);
+
+        // Create moon
+        const moon = document.createElement('div');
+        moon.className = 'moon';
+        document.body.insertBefore(moon, document.body.firstChild);
+
+        // Generate many stars with random positions and sizes
+        const numStars = 200;
+        for (let i = 0; i < numStars; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            
+            // Random position
+            star.style.top = Math.random() * 100 + '%';
+            star.style.left = Math.random() * 100 + '%';
+            
+            // Random size (1-3px)
+            const size = Math.random() * 2 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            
+            // Random twinkle animation delay
+            star.style.animationDelay = Math.random() * 3 + 's';
+            
+            // Random opacity
+            star.style.opacity = Math.random() * 0.7 + 0.3;
+            
+            starsContainer.appendChild(star);
+        }
+    }
+
     // Preload background music
     function preloadBackgroundMusic() {
         if (!backgroundMusic) {
@@ -284,6 +320,9 @@ and just may be in one of them, i do get to touch you.`
             document.addEventListener('click', () => {
                 startBackgroundMusic();
             }, { once: true }); // Only trigger once
+            
+            // Create starry night background
+            createStarryNight();
         },
 
         methods: {
