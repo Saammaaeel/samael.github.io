@@ -46,16 +46,37 @@ and just may be in one of them, i do get to touch you.`
 
     let msgSendingHandler = null;
     let audioContext = null;
+    let backgroundMusic = null;
+    let musicStarted = false;
 
-    // Initialize audio context
+    // Initialize audio context and background music
     function initAudio() {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
     }
 
+    // Start background music
+    function startBackgroundMusic() {
+        if (musicStarted) return;
+
+        if (!backgroundMusic) {
+            backgroundMusic = new Audio('/anniv/moon.mp3');
+            backgroundMusic.loop = true;
+            backgroundMusic.volume = 0.3; // Set to 30% volume for subtle background music
+        }
+
+        // Play music after user interaction
+        backgroundMusic.play().then(() => {
+            musicStarted = true;
+            console.log('Background music started');
+        }).catch(err => {
+            console.log('Background music failed to start:', err);
+        });
+    }
+
     // Play a simple beep sound
-    function playBeep(frequency = 800, duration = 100, type = 'sine') {
+    function playBeep(frequency = 800, duration = 100, type = 'sine', volume = 0.02) {
         if (!audioContext) initAudio();
         if (!audioContext) return; // Fallback if audio not supported
 
@@ -68,21 +89,21 @@ and just may be in one of them, i do get to touch you.`
         oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
         oscillator.type = type;
 
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration / 1000);
 
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + duration / 1000);
     }
 
-    // Play typing sound (subtle)
+    // Play typing sound (very subtle now)
     function playTypingSound() {
-        playBeep(600, 50, 'sine');
+        playBeep(600, 30, 'sine', 0.015); // Reduced volume from 0.1 to 0.015
     }
 
     // Play message send sound
     function playMessageSound() {
-        playBeep(800, 150, 'sine');
+        playBeep(800, 100, 'sine', 0.03); // Reduced volume from 0.1 to 0.03
     }
 
     // Create particle effects
@@ -294,6 +315,7 @@ and just may be in one of them, i do get to touch you.`
 
             sendFriendMsg(message, author) {
                 let content = getRandomMsg(message);
+                let isPoemMessage = false;
 
                 // Handle special commands and dialog content
                 if (typeof message === 'string') {
@@ -302,12 +324,10 @@ and just may be in one of them, i do get to touch you.`
                     // Check for poem commands (from dialog or direct commands)
                     if (lowerMessage === 'poem1' || lowerMessage.includes('first poem')) {
                         content = LOVE_NOTES.poem1;
-                        msg.isPoem = true;
-                        isTyping = false; // Poems appear instantly
+                        isPoemMessage = true;
                     } else if (lowerMessage === 'poem2' || lowerMessage.includes('second poem')) {
                         content = LOVE_NOTES.poem2;
-                        msg.isPoem = true;
-                        isTyping = false; // Poems appear instantly
+                        isPoemMessage = true;
                     }
 
                     // Check for particle effects
@@ -338,8 +358,8 @@ and just may be in one of them, i do get to touch you.`
                 const isImg = /<img[^>]+>/.test(content);
                 let isTyping = length > 2 || isImg;
 
-                // Memory game questions appear instantly too
-                if (content.includes('Memory Game Time') || content.includes('Which song did You play')) {
+                // Poems and memory game questions appear instantly
+                if (isPoemMessage || content.includes('Memory Game Time') || content.includes('Which song did You play')) {
                     isTyping = false;
                 }
 
@@ -349,7 +369,7 @@ and just may be in one of them, i do get to touch you.`
                     isImg: isImg,
                     isTyping: isTyping,
                     timestamp: new Date(),
-                    isPoem: content === LOVE_NOTES.poem1 || content === LOVE_NOTES.poem2
+                    isPoem: isPoemMessage
                 };
                 this.messages.push(msg);
 
@@ -492,6 +512,9 @@ and just may be in one of them, i do get to touch you.`
             say(content, dialogId) {
                 // close prompt
                 this.hasPrompt = false;
+
+                // Start background music on first user interaction
+                startBackgroundMusic();
 
                 return delay(200)
                     // send user msg
