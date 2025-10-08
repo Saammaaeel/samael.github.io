@@ -92,7 +92,8 @@
                 const msg = {
                     author: author,
                     content: isTyping ? TYPING_MSG_CONTENT : content,
-                    isImg: isImg
+                    isImg: isImg,
+                    isTyping: isTyping
                 };
                 this.messages.push(msg);
 
@@ -100,13 +101,26 @@
                     this.markMsgSize(msg);
                     setTimeout(updateScroll);
 
-                    return delay(Math.min(100 * length, 2000))
+                    // Calculate more realistic typing speed based on message length
+                    // Shorter messages: faster base speed, longer messages: slower but more consistent
+                    const baseTypingSpeed = length < 20 ? 80 : length < 50 ? 60 : 45;
+                    const typingTime = Math.min(baseTypingSpeed * length + Math.random() * 500, 3000);
+
+                    return delay(typingTime)
                         .then(() => {
-                            return this.markMsgSize(msg, content);
+                            // For text-only messages, use typewriter effect
+                            if (!isImg) {
+                                return this.typewriterEffect(msg, content);
+                            } else {
+                                return this.markMsgSize(msg, content);
+                            }
                         })
                         .then(() => delay(150))
                         .then(() => {
-                            msg.content = content;
+                            if (!msg.typewriterComplete) {
+                                msg.content = content;
+                            }
+                            msg.isTyping = false;
                             onMessageSending();
                         });
                 }
@@ -125,6 +139,31 @@
                 onMessageSending();
 
                 return Promise.resolve();
+            },
+
+            typewriterEffect(msg, fullContent) {
+                return new Promise(resolve => {
+                    let currentIndex = 0;
+                    const text = fullContent.replace(/<[^>]+>/g, ''); // Remove HTML tags for typing
+                    const typingSpeed = 50; // milliseconds per character
+
+                    const typeNextChar = () => {
+                        if (currentIndex < text.length) {
+                            currentIndex++;
+                            msg.content = fullContent.substring(0, currentIndex);
+                            msg.typewriterComplete = false;
+                            this.messages = [...this.messages];
+
+                            setTimeout(typeNextChar, typingSpeed + Math.random() * 30); // Add some randomness
+                        } else {
+                            msg.content = fullContent;
+                            msg.typewriterComplete = true;
+                            resolve();
+                        }
+                    };
+
+                    typeNextChar();
+                });
             },
 
             markMsgSize(msg, content = null) {
