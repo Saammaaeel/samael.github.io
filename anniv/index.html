@@ -27,9 +27,8 @@
                             <img :src="'/anniv/' + (msg.author === 'author' ? 'bubu.jpg' : 'dudu.jpg')" :alt="msg.author" />
                         </div>
                         <div class="msg-wrapper">
-                            <div class="msg"
-                                :class="'msg-bounce-in-' + (msg.author === 'author' ? 'left': 'right')"
-                                v-html="msg.content"></div>
+                        <div class="msg msg-fade-in"
+                            v-html="msg.content"></div>
                             <div class="msg-reactions" v-if="!msg.isTyping">
                                 <button class="reaction-btn" @click="addReaction(msg, '❤️')" :class="{active: msg.reactions && msg.reactions.includes('❤️')}">❤️</button>
                                 <button class="reaction-btn" @click="addReaction(msg, '👍')" :class="{active: msg.reactions && msg.reactions.includes('👍')}">👍</button>
