@@ -56,14 +56,13 @@ and just may be in one of them, i do get to touch you.`
         }
     }
 
-    // Start background music
-    function startBackgroundMusic() {
-        if (musicStarted) return;
-
+    // Preload background music
+    function preloadBackgroundMusic() {
         if (!backgroundMusic) {
             backgroundMusic = new Audio('/anniv/moon.mp3');
             backgroundMusic.loop = true;
-            backgroundMusic.volume = 0.85; // Set to 30% volume for subtle background music
+            backgroundMusic.volume = 0.85;
+            backgroundMusic.preload = 'auto'; // Preload the audio file
             
             // Add error handling for file not found
             backgroundMusic.addEventListener('error', (e) => {
@@ -72,18 +71,31 @@ and just may be in one of them, i do get to touch you.`
             });
             
             backgroundMusic.addEventListener('loadeddata', () => {
-                console.log('Background music loaded successfully');
+                console.log('Background music loaded and ready');
             });
         }
+    }
 
-        // Play music after user interaction
-        backgroundMusic.play().then(() => {
-            musicStarted = true;
-            console.log('Background music started playing');
-        }).catch(err => {
-            console.error('Background music failed to play:', err);
-            console.error('File path: /anniv/moon.mp3');
-        });
+    // Start background music
+    function startBackgroundMusic() {
+        if (musicStarted) return;
+
+        if (!backgroundMusic) {
+            preloadBackgroundMusic();
+        }
+
+        // Play music immediately
+        const playPromise = backgroundMusic.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                musicStarted = true;
+                console.log('Background music started playing');
+            }).catch(err => {
+                console.error('Background music failed to play:', err);
+                console.error('File path: /anniv/moon.mp3');
+            });
+        }
     }
 
     // Play a simple beep sound
@@ -267,6 +279,11 @@ and just may be in one of them, i do get to touch you.`
 
                 this.appendDialog('0000');
             });
+
+            // Add click listener to start music on any page interaction
+            document.addEventListener('click', () => {
+                startBackgroundMusic();
+            }, { once: true }); // Only trigger once
         },
 
         methods: {
