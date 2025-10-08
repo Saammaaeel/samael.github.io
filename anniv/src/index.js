@@ -172,7 +172,7 @@
                 return delay(0)
                     .then(() => msg.isImg && onImageLoad($('#mock-msg img')))
                     .then(() => {
-                        Object.assign(msg, getMockMsgSize());
+                        // No need to set width/height with flexbox layout
                         this.messages = [...this.messages];
                     });
             },

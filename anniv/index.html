@@ -16,7 +16,6 @@
                 <div id="mobile-body-bg"></div>
                 <div id="mobile-body-content">
                     <div id="mock-msg-row" class="msg-row">
-                        <div class="avatar"></div>
                         <div id="mock-msg" class="msg" v-html="latestMsgContent"></div>
                     </div>
                     <div class="msg-row"
@@ -24,11 +23,10 @@
                         :key="index"
                         :class="msg.author === 'author' ? 'msg-author' : 'msg-me'">
                         <div class="avatar">
-                            <img :src="'/anniv/' + (msg.author === 'author' ? 'dudu.jpg' : 'bubu.jpg')" :alt="msg.author" />
+                            <img :src="'/anniv/' + (msg.author === 'author' ? 'bubu.jpg' : 'dudu.jpg')" :alt="msg.author" />
                         </div>
                         <div class="msg"
                             :class="'msg-bounce-in-' + (msg.author === 'author' ? 'left': 'right')"
-                            :style="msg.width && msg.height && {width: msg.width - 26 + 'px', height: msg.height - 18 + 'px'}"
                             v-html="msg.content"></div>
                     </div>
                 </div>
