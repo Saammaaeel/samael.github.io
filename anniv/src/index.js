@@ -6,12 +6,56 @@
     };
 
     const TYPING_MSG_CONTENT = `
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
+        <div class="typing-indicator">
+            <span class="typing-text">Ndut is typing</span>
+            <div class="typing-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
     `;
 
     let msgSendingHandler = null;
+    let audioContext = null;
+
+    // Initialize audio context
+    function initAudio() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    // Play a simple beep sound
+    function playBeep(frequency = 800, duration = 100, type = 'sine') {
+        if (!audioContext) initAudio();
+        if (!audioContext) return; // Fallback if audio not supported
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.type = type;
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration / 1000);
+    }
+
+    // Play typing sound (subtle)
+    function playTypingSound() {
+        playBeep(600, 50, 'sine');
+    }
+
+    // Play message send sound
+    function playMessageSound() {
+        playBeep(800, 150, 'sine');
+    }
 
     const vm = new Vue({
         el: '#mobile',
@@ -32,6 +76,32 @@
             latestMsgContent: null
         },
 
+        computed: {
+            messageGroups() {
+                const groups = [];
+                let currentGroup = null;
+
+                this.messages.forEach(msg => {
+                    if (!currentGroup || currentGroup.author !== msg.author || msg.isTyping) {
+                        // Start a new group
+                        currentGroup = {
+                            author: msg.author,
+                            messages: [msg],
+                            timestamp: msg.timestamp
+                        };
+                        groups.push(currentGroup);
+                    } else {
+                        // Add to current group
+                        currentGroup.messages.push(msg);
+                        // Update timestamp to latest message
+                        currentGroup.timestamp = msg.timestamp;
+                    }
+                });
+
+                return groups;
+            }
+        },
+
         mounted() {
             $.getJSON('/anniv/assets/dialog.json', data => {
                 this.dialogs = data;
@@ -43,6 +113,20 @@
         },
 
         methods: {
+            formatTimestamp(timestamp) {
+                if (!timestamp) return '';
+                const now = new Date();
+                const time = new Date(timestamp);
+                const diff = now - time;
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) return 'now';
+                if (minutes < 60) return `${minutes}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                return `${days}d ago`;
+            },
             appendDialog(id) {
                 if (typeof id === 'object' && id.length > 0) {
                     // array of dialog ids
@@ -93,7 +177,8 @@
                     author: author,
                     content: isTyping ? TYPING_MSG_CONTENT : content,
                     isImg: isImg,
-                    isTyping: isTyping
+                    isTyping: isTyping,
+                    timestamp: new Date()
                 };
                 this.messages.push(msg);
 
@@ -133,7 +218,8 @@
             sendUserMsg(message) {
                 this.messages.push({
                     author: AUTHOR.ME,
-                    content: message
+                    content: message,
+                    timestamp: new Date()
                 });
 
                 onMessageSending();
@@ -153,6 +239,11 @@
                             msg.content = fullContent.substring(0, currentIndex);
                             msg.typewriterComplete = false;
                             this.messages = [...this.messages];
+
+                            // Play typing sound for each character (but not too frequently)
+                            if (currentIndex % 3 === 0) {
+                                playTypingSound();
+                            }
 
                             setTimeout(typeNextChar, typingSpeed + Math.random() * 30); // Add some randomness
                         } else {
@@ -209,6 +300,24 @@
                 return this.say(content, fromUser.nextAuthor);
             },
 
+            addReaction(msg, emoji) {
+                if (!msg.reactions) {
+                    msg.reactions = [];
+                }
+
+                const index = msg.reactions.indexOf(emoji);
+                if (index > -1) {
+                    // Remove reaction if it already exists
+                    msg.reactions.splice(index, 1);
+                } else {
+                    // Add reaction
+                    msg.reactions.push(emoji);
+                }
+
+                // Force Vue to update
+                this.messages = [...this.messages];
+            },
+
             say(content, dialogId) {
                 // close prompt
                 this.hasPrompt = false;
@@ -242,6 +351,9 @@
      * UI updating when new message is sending
      */
     function onMessageSending() {
+        // Play message send sound
+        playMessageSound();
+
         setTimeout(() => {
             // update scroll position when vue has updated ui
             updateScroll();
@@ -260,14 +372,30 @@
         const $chatbox = $('#mobile-body-content');
 
         const distance = $chatbox[0].scrollHeight - $chatbox.height() - $chatbox.scrollTop();
-        const duration = 250;
-        const startTime = Date.now();
 
-        requestAnimationFrame(function step() {
-            const p = Math.min(1, (Date.now() - startTime) / duration);
-            $chatbox.scrollTop($chatbox.scrollTop() + distance * p);
-            p < 1 && requestAnimationFrame(step);
-        });
+        // Only scroll if there's a significant distance to scroll
+        if (Math.abs(distance) > 10) {
+            const duration = 400; // Slightly longer for smoother feel
+            const startTime = Date.now();
+            const startScrollTop = $chatbox.scrollTop();
+
+            // Use easing function for smoother animation
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+
+            requestAnimationFrame(function step() {
+                const elapsed = Date.now() - startTime;
+                const p = Math.min(1, elapsed / duration);
+                const easedP = easeOutCubic(p);
+
+                $chatbox.scrollTop(startScrollTop + distance * easedP);
+
+                if (p < 1) {
+                    requestAnimationFrame(step);
+                }
+            });
+        }
     }
 
     function delay(amount = 0) {
