@@ -16,6 +16,34 @@
         </div>
     `;
 
+    // Special messages for romance
+    const LOVE_NOTES = {
+        poem1: `𝑰 𝒉𝒂𝒗𝒆 𝒔𝒆𝒂𝒓𝒄𝒉𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖 𝒊𝒏 𝒕𝒉𝒆 𝒔𝒆𝒂, 𝒕𝒉𝒆 𝒔𝒌𝒊𝒆𝒔, 𝒊𝒏 𝒕𝒉𝒆 𝒓𝒂𝒊𝒏 𝒂𝒏𝒅 𝒆𝒗𝒆𝒏 𝒂𝒕 𝒕𝒉𝒆 𝒆𝒏𝒅 𝒐𝒇 𝒆𝒗𝒆𝒓𝒚 𝒓𝒂𝒊𝒏𝒃𝒐𝒘.
+𝑰𝒇 𝒏𝒆𝒄𝒆𝒔𝒔𝒂𝒓𝒚, 𝑰 𝒘𝒊𝒍𝒍 𝒄𝒓𝒐𝒔𝒔 𝒈𝒂𝒍𝒂𝒙𝒊𝒆𝒔, 𝒘𝒐𝒓𝒍𝒅𝒔, 𝒔𝒕𝒂𝒓𝒔 𝒂𝒏𝒅 𝒕𝒉𝒆 𝒘𝒉𝒐𝒍𝒆 𝒖𝒏𝒊𝒗𝒆𝒓𝒔𝒆 𝒖𝒏𝒕𝒊𝒍 𝑰 𝒇𝒊𝒏𝒅 𝒚𝒐𝒖.
+𝒀𝒐𝒖 𝒂𝒓𝒆 𝒎𝒚 𝒅𝒓𝒆𝒂𝒎, 𝒚𝒐𝒖 𝒂𝒓𝒆 𝒎𝒚 𝒊𝒍𝒍𝒖𝒔𝒊𝒐𝒏, 𝒂𝒏𝒅 𝒕𝒉𝒆 𝒅𝒂𝒚 𝑰 𝒇𝒊𝒏𝒅 𝒚𝒐𝒖,
+ 𝑰'𝒍𝒍 𝒕𝒂𝒌𝒆 𝒚𝒐𝒖 𝒃𝒚 𝒕𝒉𝒆 𝒉𝒂𝒏𝒅 𝒕𝒐 𝒌𝒏𝒐𝒘 𝒂𝒍𝒍 𝒕𝒉𝒆 𝒊𝒏𝒄𝒓𝒆𝒅𝒊𝒃𝒍𝒆 𝒘𝒐𝒓𝒍𝒅𝒔 𝒕𝒉𝒂𝒕 𝑰 𝒅𝒊𝒔𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒘𝒉𝒆𝒏 𝑰 𝒍𝒐𝒐𝒌𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖.`,
+
+        poem2: `𝑰 𝒘𝒂𝒏𝒕 𝒕𝒐 𝒍𝒂𝒚 𝒎𝒚 𝒇𝒂𝒄𝒆 𝒊𝒏 𝒚𝒐𝒖𝒓 𝒉𝒂𝒏𝒅𝒔 𝑨𝒏𝒅 𝒄𝒍𝒐𝒔𝒆 𝒎𝒚 𝒆𝒚𝒆𝒔.
+𝒀𝒐𝒖𝒓 𝒉𝒂𝒏𝒅𝒔 - 𝒕𝒉𝒐𝒔𝒆 𝒕𝒊𝒏𝒚 𝒉𝒂𝒏𝒅𝒔.
+𝑺𝒐 𝒎𝒖𝒄𝒉 𝒔𝒎𝒂𝒍𝒍𝒆𝒓 𝒕𝒉𝒂𝒏 𝒎𝒊𝒏𝒆.
+𝑯𝒐𝒘 𝑰 𝒍𝒐𝒏𝒈 𝒕𝒐 𝒕𝒐𝒖𝒄𝒉 𝒚𝒐𝒖 - 𝒃𝒆𝒄𝒂𝒖𝒔𝒆 𝑰 𝒏𝒆𝒗𝒆𝒓 𝒉𝒂𝒗𝒆,  𝑨𝒏𝒅 𝒏𝒆𝒗𝒆𝒓 𝒘𝒊𝒍𝒍.
+𝑵𝒐𝒕 𝒊𝒏 𝒕𝒉𝒊𝒔 𝒍𝒊𝒇𝒆𝒕𝒊𝒎𝒆.
+
+𝑺𝒐... 𝑰 𝒘𝒂𝒏𝒕 𝒕𝒐 𝒃𝒆𝒍𝒊𝒆𝒗𝒆 𝒕𝒉𝒂𝒕 𝒑𝒂𝒓𝒂𝒍𝒍𝒆𝒍 𝒖𝒏𝒊𝒗𝒆𝒓𝒔𝒆𝒔 𝒅𝒐 𝒆𝒙𝒊𝒔𝒕.
+𝑨𝒏𝒅 𝒋𝒖𝒔𝒕 𝒎𝒂𝒚 𝒃𝒆 𝒊𝒏 𝒐𝒏𝒆 𝒐𝒇 𝒕𝒉𝒆𝒎, 𝑰 𝒅𝒐 𝒈𝒆𝒕 𝒕𝒐 𝒕𝒐𝒖𝒄𝒉 𝒚𝒐𝒖.`
+    };
+
+    // Memory game questions and answers
+    const MEMORY_GAME = {
+        "which song that you played for my birthday": "ps i love you by paul partohap"
+    };
+
+    // Particle system for effects
+    let particleCanvas = null;
+    let particleCtx = null;
+    let particles = [];
+    let animationId = null;
+
     let msgSendingHandler = null;
     let audioContext = null;
 
@@ -55,6 +83,128 @@
     // Play message send sound
     function playMessageSound() {
         playBeep(800, 150, 'sine');
+    }
+
+    // Create particle effects
+    function initParticles() {
+        if (particleCanvas) return; // Already initialized
+
+        particleCanvas = document.createElement('canvas');
+        particleCanvas.id = 'particle-canvas';
+        particleCanvas.style.position = 'fixed';
+        particleCanvas.style.top = '0';
+        particleCanvas.style.left = '0';
+        particleCanvas.style.width = '100%';
+        particleCanvas.style.height = '100%';
+        particleCanvas.style.pointerEvents = 'none';
+        particleCanvas.style.zIndex = '1000';
+
+        document.body.appendChild(particleCanvas);
+
+        particleCtx = particleCanvas.getContext('2d');
+        resizeCanvas();
+
+        window.addEventListener('resize', resizeCanvas);
+    }
+
+    function resizeCanvas() {
+        if (!particleCanvas) return;
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+    }
+
+    function createParticles(type, count = 20) {
+        if (!particleCanvas) initParticles();
+
+        const emojis = {
+            hearts: ['❤️', '💖', '💕', '💗', '💓'],
+            stars: ['⭐', '✨', '🌟', '💫', '🌠'],
+            petals: ['🌸', '🌺', '🌹', '🌷', '🌼']
+        };
+
+        const selectedEmojis = emojis[type] || emojis.hearts;
+
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: Math.random() * particleCanvas.width,
+                y: particleCanvas.height + 50,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -(Math.random() * 3 + 2),
+                life: 1,
+                emoji: selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)],
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.1
+            });
+        }
+
+        if (!animationId) {
+            animateParticles();
+        }
+    }
+
+    function animateParticles() {
+        if (!particleCtx || !particleCanvas) return;
+
+        particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+        particles = particles.filter(particle => {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.1; // gravity
+            particle.life -= 0.005;
+            particle.rotation += particle.rotationSpeed;
+
+            if (particle.life > 0) {
+                particleCtx.save();
+                particleCtx.globalAlpha = particle.life;
+                particleCtx.translate(particle.x, particle.y);
+                particleCtx.rotate(particle.rotation);
+                particleCtx.font = '20px Arial';
+                particleCtx.textAlign = 'center';
+                particleCtx.fillText(particle.emoji, 0, 0);
+                particleCtx.restore();
+                return true;
+            }
+            return false;
+        });
+
+        if (particles.length > 0) {
+            animationId = requestAnimationFrame(animateParticles);
+        } else {
+            animationId = null;
+        }
+    }
+
+    // Encrypt/decrypt message effect
+    function encryptMessage(text) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+        return text.split('').map(char => {
+            if (char === ' ') return ' ';
+            return chars[Math.floor(Math.random() * chars.length)];
+        }).join('');
+    }
+
+    function decryptMessage(encryptedText, originalText) {
+        let currentText = encryptedText;
+        let step = 0;
+        const maxSteps = 20;
+
+        const decryptStep = () => {
+            if (step >= maxSteps) return originalText;
+
+            currentText = currentText.split('').map((char, index) => {
+                if (char === ' ') return ' ';
+                if (char === originalText[index]) return char;
+                if (Math.random() < 0.3) return originalText[index];
+                return encryptMessage(char)[0];
+            }).join('');
+
+            step++;
+            setTimeout(decryptStep, 50);
+            return currentText;
+        };
+
+        return decryptStep();
     }
 
     const vm = new Vue({
@@ -143,7 +293,48 @@
             },
 
             sendFriendMsg(message, author) {
-                const content = getRandomMsg(message);
+                let content = getRandomMsg(message);
+
+                // Handle special commands
+                if (typeof message === 'string') {
+                    const lowerMessage = message.toLowerCase().trim();
+
+                    // Check for memory game questions
+                    if (MEMORY_GAME[lowerMessage]) {
+                        content = MEMORY_GAME[lowerMessage];
+                    }
+
+                    // Check for poem commands
+                    if (lowerMessage === 'poem1' || lowerMessage.includes('first poem')) {
+                        content = LOVE_NOTES.poem1;
+                    } else if (lowerMessage === 'poem2' || lowerMessage.includes('second poem')) {
+                        content = LOVE_NOTES.poem2;
+                    }
+
+                    // Check for particle effects
+                    if (lowerMessage.includes('hearts') || lowerMessage.includes('love')) {
+                        setTimeout(() => createParticles('hearts', 15), 1000);
+                    } else if (lowerMessage.includes('stars')) {
+                        setTimeout(() => createParticles('stars', 12), 1000);
+                    } else if (lowerMessage.includes('petals') || lowerMessage.includes('flowers')) {
+                        setTimeout(() => createParticles('petals', 18), 1000);
+                    }
+
+                    // Check for encryption (just for fun visual effect)
+                    if (lowerMessage.includes('encrypt') || lowerMessage.includes('secret')) {
+                        const originalContent = content;
+                        content = encryptMessage(content);
+                        setTimeout(() => {
+                            // Trigger decryption animation
+                            const msgElement = document.querySelector('.msg-row:last-child .msg');
+                            if (msgElement) {
+                                decryptMessage(content, originalContent);
+                                msgElement.textContent = originalContent;
+                            }
+                        }, 2000);
+                    }
+                }
+
                 const length = content.replace(/<[^>]+>/g,"").length;
                 const isImg = /<img[^>]+>/.test(content);
                 const isTyping = length > 2 || isImg;
@@ -153,7 +344,8 @@
                     content: isTyping ? TYPING_MSG_CONTENT : content,
                     isImg: isImg,
                     isTyping: isTyping,
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    isPoem: content === LOVE_NOTES.poem1 || content === LOVE_NOTES.poem2
                 };
                 this.messages.push(msg);
 

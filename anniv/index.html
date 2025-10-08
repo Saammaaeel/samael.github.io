@@ -26,9 +26,10 @@
                         <div class="avatar">
                             <img :src="'/anniv/' + (msg.author === 'author' ? 'bubu.jpg' : 'dudu.jpg')" :alt="msg.author" />
                         </div>
-                        <div class="msg-wrapper">
-                        <div class="msg msg-fade-in"
-                            v-html="msg.content"></div>
+                <div class="msg-wrapper">
+                <div class="msg msg-fade-in"
+                    :class="{ 'msg-poem': msg.isPoem && msg.author === 'author', 'msg-poem-author': msg.isPoem && msg.author === 'me' }"
+                    v-html="msg.content"></div>
                             <div class="msg-reactions" v-if="!msg.isTyping">
                                 <button class="reaction-btn" @click="addReaction(msg, '❤️')" :class="{active: msg.reactions && msg.reactions.includes('❤️')}">❤️</button>
                                 <button class="reaction-btn" @click="addReaction(msg, '👍')" :class="{active: msg.reactions && msg.reactions.includes('👍')}">👍</button>
