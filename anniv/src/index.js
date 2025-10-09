@@ -126,6 +126,29 @@ and just may be in one of them, i do get to touch you.`
         // Append all stars at once for better performance
         starsContainer.appendChild(fragment);
         
+        // Add extra stars specifically for better distribution on larger screens
+        const extraFragment = document.createDocumentFragment();
+        for (let i = 0; i < 200; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            
+            // Focus on left and edges
+            const leftBias = Math.random() < 0.6; // 60% chance for left side
+            star.style.top = Math.random() * 100 + '%';
+            star.style.left = leftBias ? Math.random() * 40 + '%' : Math.random() * 100 + '%';
+            
+            const size = Math.random() * 2.5 + 0.5;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            
+            star.style.animationDelay = Math.random() * 5 + 's';
+            star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            star.style.opacity = Math.random() * 0.8 + 0.2;
+            
+            extraFragment.appendChild(star);
+        }
+        starsContainer.appendChild(extraFragment);
+        
         // Create clouds
         createClouds();
         
