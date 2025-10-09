@@ -56,7 +56,7 @@ and just may be in one of them, i do get to touch you.`
         }
     }
 
-    // Create starry night background
+    // Create starry night background with performance optimization
     function createStarryNight() {
         const starsContainer = document.createElement('div');
         starsContainer.className = 'stars';
@@ -67,8 +67,20 @@ and just may be in one of them, i do get to touch you.`
         moon.className = 'moon';
         document.body.insertBefore(moon, document.body.firstChild);
 
-        // Generate many stars with random positions and sizes
-        const numStars = 200;
+        // Create anniversary badge
+        const badge = document.createElement('div');
+        badge.className = 'anniversary-badge';
+        badge.innerHTML = `
+            <div class="date">October 15, 2025</div>
+            <div class="label">Our Anniversary ❤️</div>
+        `;
+        document.body.appendChild(badge);
+
+        // Performance optimization: Use DocumentFragment for batch append
+        const fragment = document.createDocumentFragment();
+        
+        // Generate stars with optimized rendering
+        const numStars = 500;
         for (let i = 0; i < numStars; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -77,19 +89,98 @@ and just may be in one of them, i do get to touch you.`
             star.style.top = Math.random() * 100 + '%';
             star.style.left = Math.random() * 100 + '%';
             
-            // Random size (1-3px)
-            const size = Math.random() * 2 + 1;
+            // Random size (0.5-3px)
+            const size = Math.random() * 2.5 + 0.5;
             star.style.width = size + 'px';
             star.style.height = size + 'px';
             
-            // Random twinkle animation delay
-            star.style.animationDelay = Math.random() * 3 + 's';
+            // Random animation
+            star.style.animationDelay = Math.random() * 5 + 's';
+            star.style.animationDuration = (Math.random() * 2 + 2) + 's';
             
             // Random opacity
-            star.style.opacity = Math.random() * 0.7 + 0.3;
+            star.style.opacity = Math.random() * 0.8 + 0.2;
             
-            starsContainer.appendChild(star);
+            fragment.appendChild(star);
         }
+        
+        // Add bright stars
+        for (let i = 0; i < 30; i++) {
+            const brightStar = document.createElement('div');
+            brightStar.className = 'star bright-star';
+            
+            brightStar.style.top = Math.random() * 100 + '%';
+            brightStar.style.left = Math.random() * 100 + '%';
+            
+            const size = Math.random() * 1.5 + 2;
+            brightStar.style.width = size + 'px';
+            brightStar.style.height = size + 'px';
+            
+            brightStar.style.animationDelay = Math.random() * 3 + 's';
+            brightStar.style.opacity = 1;
+            brightStar.style.boxShadow = '0 0 3px rgba(255,255,255,0.8)';
+            
+            fragment.appendChild(brightStar);
+        }
+        
+        // Append all stars at once for better performance
+        starsContainer.appendChild(fragment);
+        
+        // Create clouds
+        createClouds();
+        
+        // Start shooting stars
+        setInterval(createShootingStar, Math.random() * 10000 + 10000); // Every 10-20 seconds
+    }
+
+    // Create drifting cloud wisps
+    function createClouds() {
+        const numClouds = 5;
+        for (let i = 0; i < numClouds; i++) {
+            setTimeout(() => {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                
+                // Random size
+                const width = Math.random() * 300 + 200;
+                const height = Math.random() * 100 + 80;
+                cloud.style.width = width + 'px';
+                cloud.style.height = height + 'px';
+                
+                // Random vertical position
+                cloud.style.top = Math.random() * 100 + '%';
+                cloud.style.left = '-10%';
+                
+                // Random duration
+                cloud.style.animationDuration = (Math.random() * 60 + 100) + 's';
+                cloud.style.animationDelay = (Math.random() * 20) + 's';
+                
+                document.body.appendChild(cloud);
+            }, i * 2000); // Stagger cloud creation
+        }
+    }
+
+    // Create shooting star effect
+    function createShootingStar() {
+        const shootingStar = document.createElement('div');
+        shootingStar.className = 'shooting-star';
+        
+        // Random starting position (top area, right side)
+        shootingStar.style.top = Math.random() * 30 + '%';
+        shootingStar.style.right = Math.random() * 30 + '%';
+        
+        // Random duration (1-2 seconds)
+        const duration = Math.random() * 1000 + 1000;
+        shootingStar.style.animation = `shootingStar ${duration}ms linear forwards`;
+        
+        document.body.appendChild(shootingStar);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (shootingStar.parentNode) {
+                shootingStar.parentNode.removeChild(shootingStar);
+            }
+        }, duration);
     }
 
     // Preload background music
