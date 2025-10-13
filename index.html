@@ -11,11 +11,6 @@
     <link rel="dns-prefetch" href="//unpkg.com">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
 
-    <!-- Preload critical resources -->
-    <link rel="modulepreload" href="main.js">
-    <link rel="preload" href="https://unpkg.com/three@0.160.0/build/three.module.js" as="script" crossorigin>
-    <link rel="preload" href="https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.js" as="script" crossorigin>
-
     <style>
         body {
             margin: 0;
@@ -49,7 +44,8 @@
 </head>
 <body>
     <div id="loading">Loading...</div>
-    <script type="importmap">
+    <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.min.js"></script>
+    <script type="importmap-shim">
         {
             "imports": {
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -57,6 +53,6 @@
             }
         }
     </script>
-    <script type="module" src="main.js"></script>
+    <script type="module-shim" src="./main.js"></script>
 </body>
 </html> 
