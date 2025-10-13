@@ -57,58 +57,74 @@ function detectMobile() {
     return isMobile;
 }
 
-// --- Quality Settings ---
+// --- Enhanced Quality Settings ---
 function updateQualitySettings() {
-    const wasUltra = uniforms.detail_level.value >= 2.0;
-    
-    // More aggressive performance optimization
+    const wasUltra = uniforms.detail_level.value >= 1.2;
+
+    // Aggressive performance optimization based on device capabilities
+    const deviceMultiplier = isMobile ? 0.4 : batteryMode ? 0.6 : 1.0;
+
     switch(qualityLevel) {
         case 'low':
-            uniforms.quality_factor.value = 0.25;
-            uniforms.iteration_count.value = isMobile ? 15.0 : 25.0;
-            uniforms.detail_level.value = 0.3;
+            uniforms.quality_factor.value = 0.15 * deviceMultiplier;
+            uniforms.iteration_count.value = isMobile ? 8.0 : 12.0;
+            uniforms.detail_level.value = 0.2;
             break;
         case 'medium':
-            uniforms.quality_factor.value = 0.5;
-            uniforms.iteration_count.value = isMobile ? 25.0 : 40.0;
-            uniforms.detail_level.value = 0.6;
+            uniforms.quality_factor.value = 0.35 * deviceMultiplier;
+            uniforms.iteration_count.value = isMobile ? 15.0 : 25.0;
+            uniforms.detail_level.value = 0.5;
             break;
         case 'high':
-            uniforms.quality_factor.value = 0.8;
-            uniforms.iteration_count.value = isMobile ? 40.0 : 60.0;
+            uniforms.quality_factor.value = 0.6 * deviceMultiplier;
+            uniforms.iteration_count.value = isMobile ? 25.0 : 45.0;
             uniforms.detail_level.value = 0.8;
             break;
         case 'ultra':
-            uniforms.quality_factor.value = 1.0;
-            uniforms.iteration_count.value = isMobile ? 50.0 : 75.0; // Reduced from 150
-            uniforms.detail_level.value = 1.5; // Reduced from 2.0
-            
+            uniforms.quality_factor.value = 1.0 * deviceMultiplier;
+            uniforms.iteration_count.value = isMobile ? 35.0 : 65.0;
+            uniforms.detail_level.value = 1.2;
+
             // Special welcome message for first-time ultra activation
             if (!wasUltra) {
                 setTimeout(() => {
                     showDetailedNotification(
-                        '🌌 ULTRA MODE ACTIVATED', 
+                        '🌌 ULTRA MODE ACTIVATED',
                         '🌫️ Optimized Volumetric Effects\n☁️ Performance-Balanced Atmosphere\n🌅 Smooth Real-time Rendering\n✨ 60fps Ultra Experience\n🔬 Beautiful and Responsive!',
-                        5000
+                        4000
                     );
                 }, 500);
             }
             break;
     }
-    
-    // Adaptive quality based on screen size and device
+
+    // Aggressive resolution-based scaling
     const screenArea = window.innerWidth * window.innerHeight;
-    const isHighRes = screenArea > 2073600; // 1920x1080
-    
-    if (isHighRes && !isMobile) {
+    const isVeryHighRes = screenArea > 3840 * 2160; // 4K
+    const isHighRes = screenArea > 1920 * 1080; // 1080p
+
+    if (isVeryHighRes) {
+        // Very aggressive scaling for 4K+ displays
+        uniforms.quality_factor.value *= 0.4;
+        uniforms.iteration_count.value *= 0.5;
+    } else if (isHighRes) {
         // Scale down quality for high resolution displays
+        uniforms.quality_factor.value *= 0.6;
+        uniforms.iteration_count.value *= 0.7;
+    }
+
+    // Additional battery mode optimizations
+    if (batteryMode) {
         uniforms.quality_factor.value *= 0.7;
         uniforms.iteration_count.value *= 0.8;
     }
-    
-    // Add resolution-based scaling
-    const resolutionScale = Math.min(1.0, 1920 / window.innerWidth);
-    uniforms.quality_factor.value *= resolutionScale;
+
+    // Performance monitoring integration
+    if (typeof fps !== 'undefined' && fps < 30 && qualityLevel !== 'low') {
+        // Emergency quality reduction
+        uniforms.quality_factor.value *= 0.8;
+        uniforms.detail_level.value *= 0.9;
+    }
 }
 
 // --- Touch Gesture Handling ---
@@ -305,93 +321,103 @@ const vertexShader = `
 
 // --- Shader Code (Performance Optimized) ---
 const volumetric_atmosphere_code = `
-    // Optimized atmospheric scattering
+    // Highly optimized atmospheric scattering
     vec3 rayleigh_scattering(float cosTheta) {
-        return vec3(0.58, 1.35, 3.31) * (1.0 + cosTheta * cosTheta) * 0.06;
+        float phase = 1.0 + cosTheta * cosTheta;
+        return vec3(0.58, 1.35, 3.31) * phase * 0.03; // Reduced intensity
     }
-    
+
     vec3 mie_scattering(float cosTheta, float g) {
         float g2 = g * g;
-        float num = (1.0 - g2);
-        float denom = pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
-        return vec3(0.4) * num / denom;
+        float phase = (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
+        return vec3(0.4) * phase;
     }
-    
-    // Optimized noise function
+
+    // Faster noise function using precomputed values
     float noise3D(vec3 p) {
-        p = fract(p * 0.1031);
-        p += dot(p, p.yzx + 33.33);
-        return fract((p.x + p.y) * p.z);
+        vec3 p0 = fract(p * 0.1031);
+        p0 += dot(p0, p0.yzx + 33.33);
+        return fract((p0.x + p0.y) * p0.z);
     }
-    
-    // Much faster FBM with fewer octaves
+
+    // Unrolled FBM for better performance (max 4 octaves)
     float fbm(vec3 p, int octaves) {
         float value = 0.0;
-        float amplitude = 0.5;
-        float frequency = 1.0;
-        
-        // Limit to maximum 4 octaves for performance
-        int maxOctaves = min(octaves, 4);
-        
-        for (int i = 0; i < 4; i++) {
-            if (i >= maxOctaves) break;
-            value += noise3D(p * frequency) * amplitude;
-            frequency *= 2.0;
-            amplitude *= 0.5;
+        float amp = 0.5;
+        float freq = 1.0;
+
+        // Unroll loops for better GPU performance
+        if (octaves >= 1) {
+            value += noise3D(p * freq) * amp;
+            freq *= 2.0; amp *= 0.5;
         }
+        if (octaves >= 2) {
+            value += noise3D(p * freq) * amp;
+            freq *= 2.0; amp *= 0.5;
+        }
+        if (octaves >= 3) {
+            value += noise3D(p * freq) * amp;
+            freq *= 2.0; amp *= 0.5;
+        }
+        if (octaves >= 4) {
+            value += noise3D(p * freq) * amp;
+        }
+
         return value;
     }
     
     vec4 get_volumetric_atmosphere(vec2 uv, vec3 rayDir, float time) {
         vec3 sunDir = normalize(vec3(sin(time * 0.1), 0.8, cos(time * 0.1)));
         float cosTheta = dot(rayDir, sunDir);
-        
-        // Simplified atmospheric density
+
+        // Optimized atmospheric density calculation
         float altitude = rayDir.y * 0.5 + 0.5;
-        float density = exp(-altitude * 3.0);
-        
-        // Single optimized cloud layer instead of 3
-        vec3 cloudPos = rayDir * 60.0 + vec3(time * 1.5, time * 0.3, time * 1.0);
-        float cloud = fbm(cloudPos * 0.015, 3); // Reduced from 6 octaves
-        cloud = smoothstep(0.4, 0.8, cloud);
-        
-        // Optional second layer only for ultra quality
-        float cloud2 = 0.0;
-        if (detail_level > 1.0) {
-            vec3 cloudPos2 = rayDir * 90.0 + vec3(time * -1.0, time * 0.2, time * 1.5);
-            cloud2 = fbm(cloudPos2 * 0.01, 2); // Reduced from 5 octaves
-            cloud2 = smoothstep(0.5, 0.9, cloud2) * 0.3;
+        float density = exp(-altitude * 2.0); // Reduced multiplier for performance
+
+        // Simplified cloud calculation
+        vec3 cloudPos = rayDir * 50.0 + vec3(time * 1.2, time * 0.2, time * 0.8);
+        float cloud = 0.0;
+
+        // Quality-based cloud calculation
+        if (detail_level >= 0.6) {
+            cloud = fbm(cloudPos * 0.02, detail_level >= 1.0 ? 3 : 2);
+            cloud = smoothstep(0.3, 0.7, cloud);
         }
-        
-        float totalCloud = cloud + cloud2;
-        
-        // Simplified scattering
-        vec3 rayleigh = rayleigh_scattering(cosTheta);
-        vec3 mie = mie_scattering(cosTheta, 0.76);
-        
-        // Simplified atmospheric coloring
-        vec3 horizonColor = vec3(1.0, 0.5, 0.2) * (1.0 - altitude);
-        vec3 zenithColor = vec3(0.2, 0.4, 0.9) * altitude;
-        vec3 skyColor = mix(horizonColor, zenithColor, altitude);
-        
-        // Simplified sun disk
-        float sunIntensity = max(0.0, 1.0 - distance(rayDir.xy, sunDir.xy) * 25.0);
-        vec3 sunColor = vec3(1.0, 0.9, 0.7) * sunIntensity * 10.0;
-        
-        // Combine effects more efficiently
-        vec3 scatteredLight = rayleigh * skyColor;
-        vec3 cloudColor = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.7, 0.4), sunIntensity);
-        
-        vec3 finalColor = scatteredLight + sunColor;
-        finalColor = mix(finalColor, cloudColor, totalCloud * density);
-        
-        // Simplified god rays
-        if (detail_level > 1.0) {
-            float godRays = pow(max(0.0, cosTheta), 6.0) * totalCloud * 0.3;
-            finalColor += vec3(1.0, 0.8, 0.6) * godRays;
+
+        // Ultra quality gets additional cloud layer
+        if (detail_level >= 1.2) {
+            vec3 cloudPos2 = rayDir * 80.0 + vec3(time * -0.8, time * 0.1, time * 1.2);
+            float cloud2 = fbm(cloudPos2 * 0.015, 2);
+            cloud += smoothstep(0.4, 0.8, cloud2) * 0.4;
         }
-        
-        float alpha = density * (0.2 + totalCloud * 0.5);
+
+        // Simplified sky color calculation
+        vec3 skyColor = mix(
+            vec3(1.0, 0.6, 0.3) * (1.0 - altitude), // Horizon
+            vec3(0.3, 0.5, 1.0) * altitude,          // Zenith
+            altitude
+        );
+
+        // Simplified sun disk (only for higher quality)
+        vec3 sunColor = vec3(0.0);
+        if (detail_level >= 0.8) {
+            float sunIntensity = max(0.0, 1.0 - distance(rayDir.xy, sunDir.xy) * 20.0);
+            sunColor = vec3(1.0, 0.9, 0.8) * sunIntensity * 8.0;
+        }
+
+        // Simplified scattering (only for ultra quality)
+        vec3 scatteredLight = vec3(0.0);
+        if (detail_level >= 1.2) {
+            scatteredLight = rayleigh_scattering(cosTheta) * skyColor * 0.5;
+        }
+
+        // Combine colors efficiently
+        vec3 cloudColor = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.8, 0.5), max(0.0, cosTheta));
+        vec3 finalColor = skyColor + sunColor + scatteredLight;
+        finalColor = mix(finalColor, cloudColor, cloud * density);
+
+        // Simplified alpha calculation
+        float alpha = density * (0.15 + cloud * 0.4);
         return vec4(finalColor, alpha);
     }
 `;
@@ -400,115 +426,136 @@ const tunnel_shader_code = `
     vec4 get_tunnel_color(vec2 u, float t) {
         vec4 fragColor = vec4(0.0);
         float d = 0.0;
-        for (float i = 0.0; i < 100.0; i++) {
+
+        // Quality-based iteration count
+        float maxIterations = detail_level >= 1.0 ? 60.0 : detail_level >= 0.6 ? 40.0 : 25.0;
+
+        for (float i = 0.0; i < 60.0; i++) {
+            if (i >= maxIterations) break;
+
             vec3 p = vec3(u * d, d + t * 2.0);
             float angle = p.z * 0.2;
             p.xy *= mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+
             float s = sin(p.y + p.x);
-            for (float n = 1.0; n < 32.0; n += n) {
-                s -= abs(dot(cos(0.3 * t + p * n), vec3(0.3))) / n;
+
+            // Simplified inner loop for performance
+            if (detail_level >= 0.8) {
+                for (float n = 1.0; n < 16.0; n += n) {
+                    s -= abs(dot(cos(0.3 * t + p * n), vec3(0.3))) / n;
+                }
             }
+
             s = 0.01 + abs(s) * 0.8;
             d += s;
             fragColor += vec4(0.1 / s);
         }
-        
-        vec4 result = tanh(fragColor / 20000.0 / length(u));
-        
+
+        vec4 result = tanh(fragColor / 15000.0 / length(u));
+
         // Ultra quality: Add volumetric atmosphere overlay
         if (detail_level >= 1.2) {
             vec3 rayDir = normalize(vec3(u, 1.0));
             vec4 atmosphere = get_volumetric_atmosphere(u, rayDir, t);
-            result = mix(result, atmosphere, atmosphere.a * 0.2);
+            result = mix(result, atmosphere, atmosphere.a * 0.15);
         }
-        
+
         return result;
     }
 `;
 
 const singularity_shader_code = `
 vec4 get_singularity_color(vec2 fragCoord, vec2 resolution, float time) {
+    vec2 p = (fragCoord + fragCoord - resolution) / resolution.y / 0.7;
+    vec2 d = vec2(-1,1);
     float i = 0.2, a;
-    vec2 r = resolution,
-         p = (fragCoord + fragCoord - r) / r.y / 0.7,
-         d = vec2(-1,1),
-         b = p - i*d,
-         c = p * mat2(1, 1, d/(0.1 + i/dot(b,b))),
-         v = c * mat2(cos(0.5*log(a=dot(c,c)) + time*i + vec4(0,33,11,0)))/i,
-         w;
-    
-    for(; i<9.0; i++) {
-        w += 1.0+sin(v);
-        v += 0.7* sin(v.yx*i+time) / i + 0.5;
+
+    vec2 b = p - i*d;
+    vec2 c = p * mat2(1, 1, d/(0.1 + i/dot(b,b)));
+    vec2 v = c * mat2(cos(0.5*log(a=dot(c,c)) + time*i + vec4(0,33,11,0)))/i;
+    vec2 w = vec2(0.0);
+
+    // Quality-based iteration count
+    float maxIter = detail_level >= 1.0 ? 7.0 : detail_level >= 0.6 ? 5.0 : 3.0;
+
+    for(float iter = 0.0; iter < 7.0; iter++) {
+        if (iter >= maxIter) break;
+        w += 1.0 + sin(v);
+        v += 0.7 * sin(v.yx * i + time) / i + 0.5;
+        i += 0.1;
     }
-    
-    i = length( sin(v/0.3)*0.4 + c*(3.0+d) );
-    
-    vec4 O = 1.0 - exp( -exp( c.x * vec4(0.6,-0.4,-1.0,0) )
+
+    float dist = length(sin(v/0.3)*0.4 + c*(3.0+d));
+
+    vec4 O = 1.0 - exp(-exp(c.x * vec4(0.6,-0.4,-1.0,0))
                    / w.xyyx
-                   / ( 2.0 + i*i/4.0 - i )
-                   / ( 0.5 + 1.0 / a )
-                   / ( 0.03 + abs( length(p)-0.7 ) )
+                   / (2.0 + dist*dist/4.0 - dist)
+                   / (0.5 + 1.0 / a)
+                   / (0.03 + abs(length(p)-0.7))
              );
-    
+
     vec4 result = O;
-    
+
     // Ultra quality: Add volumetric atmospheric effects around singularity
     if (detail_level >= 1.2) {
         vec3 rayDir = normalize(vec3(p, 0.8));
         vec4 atmosphere = get_volumetric_atmosphere(p, rayDir, time);
-        
-        // Add accretion disk effects
+
+        // Simplified accretion disk effects
         float diskDist = length(p);
-        float diskEffect = exp(-diskDist * 1.5) * 0.3;
+        float diskEffect = exp(-diskDist * 2.0) * 0.2;
         atmosphere.rgb *= (1.0 + diskEffect);
-        
-        result = mix(result, atmosphere, atmosphere.a * 0.25);
+
+        result = mix(result, atmosphere, atmosphere.a * 0.2);
     }
-    
+
     return result;
 }
 `;
 
 const transition_shader_code = `
-    // 'Warp Speed 2' by David Hoskins 2015.
-    // Adapted for Three.js
     vec4 get_transition_color(vec2 fragCoord, vec2 resolution, float time) {
-        float s = 0.0, v = 0.0;
         vec2 uv = (fragCoord / resolution) * 2.0 - 1.0;
-        float t = (time - 2.0) * 58.0;
+        float t = (time - 2.0) * 45.0; // Reduced speed for performance
         vec3 col = vec3(0.0);
         vec3 init = vec3(sin(t * 0.0032) * 0.3, 0.35 - cos(t * 0.005) * 0.3, t * 0.002);
-        for (int r = 0; r < 100; r++) 
-        {
-            vec3 p = init + s * vec3(uv, 0.05);
+
+        // Quality-based outer loop count
+        int maxR = detail_level >= 1.0 ? 60 : detail_level >= 0.6 ? 40 : 25;
+        float stepSize = detail_level >= 1.0 ? 0.025 : 0.035; // Larger steps for lower quality
+
+        for (int r = 0; r < 60; r++) {
+            if (r >= maxR) break;
+
+            vec3 p = init + float(r) * stepSize * vec3(uv, 0.05);
             p.z = fract(p.z);
-            for (int i = 0; i < 10; i++) {
+
+            // Quality-based inner loop count
+            int maxI = detail_level >= 1.0 ? 8 : detail_level >= 0.6 ? 6 : 4;
+
+            for (int i = 0; i < 8; i++) {
+                if (i >= maxI) break;
                 p = abs(p * 2.04) / dot(p, p) - 0.9;
             }
-            v += pow(dot(p, p), 0.7) * 0.06;
+
+            float v = pow(dot(p, p), 0.7) * 0.06;
             col += vec3(v) * 0.00003;
-            s += 0.025;
         }
-        
-        vec4 result = tanh(vec4(col, 1.0) / 30.0 / length(uv));
-        
+
+        vec4 result = tanh(vec4(col, 1.0) / 25.0 / length(uv));
+
         // Ultra quality: Add volumetric warp effects
         if (detail_level >= 1.2) {
             vec3 rayDir = normalize(vec3(uv, 0.4));
             vec4 atmosphere = get_volumetric_atmosphere(uv, rayDir, time);
-            
-            // Add warp effects
-            float warpStrength = length(col) * 0.05;
+
+            // Simplified warp effects
+            float warpStrength = length(col) * 0.03;
             atmosphere.rgb *= (1.0 + warpStrength);
-            
-            // Add warp rays
-            vec3 warpRays = vec3(1.0, 0.9, 0.95) * warpStrength;
-            atmosphere.rgb += warpRays;
-            
-            result = mix(result, atmosphere, atmosphere.a * 0.4);
+
+            result = mix(result, atmosphere, atmosphere.a * 0.3);
         }
-        
+
         return result;
     }
 `;
@@ -568,6 +615,10 @@ function performTransformation() {
 function main() {
     // Initialize mobile detection and settings
     detectMobile();
+    // Ensure mobile starts at a conservative quality
+    if (isMobile && qualityLevel !== 'low') {
+        qualityLevel = 'medium';
+    }
     updateQualitySettings();
     
     // --- Shader Compilation ---
@@ -619,21 +670,68 @@ function main() {
     
     // --- Start Animation Loop ---
     animate(0);
+
+    // Optional debug overlay (toggle with ?debug=fps or press 'd')
+    setupDebugOverlay();
 }
 
  
 
 function init(fragmentShader) {
-    renderer = new THREE.WebGLRenderer({ 
-        antialias: !isMobile, // Disable antialiasing on mobile for performance
-        powerPreference: batteryMode ? "low-power" : "high-performance"
+    // Optimized WebGL context creation
+    const contextAttributes = {
+        alpha: false, // No alpha channel needed
+        depth: false, // No depth buffer needed for 2D shader
+        stencil: false, // No stencil buffer needed
+        antialias: qualityLevel === 'ultra' && !isMobile, // Only ultra quality gets antialiasing
+        powerPreference: batteryMode ? "low-power" : "high-performance",
+        failIfMajorPerformanceCaveat: false, // Don't fail on slow GPUs
+        desynchronized: true // Reduce latency
+    };
+
+    renderer = new THREE.WebGLRenderer({
+        context: null, // Let Three.js create the context
+        ...contextAttributes
     });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // Adjust pixel ratio for mobile
-    const pixelRatio = isMobile ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio;
+
+    // Aggressive pixel ratio optimization
+    let pixelRatio = window.devicePixelRatio || 1;
+
+    if (isMobile) {
+        // More aggressive mobile optimization
+        pixelRatio = Math.min(pixelRatio, qualityLevel === 'low' ? 1 : 2);
+    } else {
+        // Desktop optimization
+        pixelRatio = Math.min(pixelRatio, qualityLevel === 'ultra' ? pixelRatio : Math.min(pixelRatio, 2));
+    }
+
+    // High refresh rate display optimization
+    const isHighRefresh = window.screen && window.screen.refreshRate > 90;
+    if (isHighRefresh && !batteryMode) {
+        pixelRatio = Math.min(pixelRatio, 1.5); // Limit pixel ratio on high refresh displays
+    }
+
     renderer.setPixelRatio(pixelRatio);
-    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Performance optimizations
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping; // No tone mapping for performance
+    renderer.shadowMap.enabled = false; // No shadows needed
+    renderer.sortObjects = false; // No object sorting needed
+
+    // Context loss handling
+    renderer.domElement.addEventListener('webglcontextlost', (event) => {
+        event.preventDefault();
+        showDetailedNotification('⚠️ Graphics Context Lost', 'Restarting renderer...', 3000);
+        setTimeout(() => location.reload(), 1000);
+    });
+
+    renderer.domElement.addEventListener('webglcontextrestored', () => {
+        showDetailedNotification('✅ Graphics Context Restored', 'Renderer restarted successfully', 2000);
+        init(fragmentShader); // Reinitialize
+    });
+
     document.body.appendChild(renderer.domElement);
 
     scene = new THREE.Scene();
@@ -648,7 +746,12 @@ function init(fragmentShader) {
         fragmentShader: fragmentShader,
     });
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    // Optimized geometry - use a simple plane with minimal vertices
+    const geometry = new THREE.PlaneGeometry(2, 2, 1, 1); // Reduced segments for performance
+    geometry.computeBoundingSphere(); // Pre-compute bounds
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false; // Disable frustum culling for full-screen quad
     scene.add(mesh);
 
     // --- Enhanced GUI Setup ---
@@ -690,33 +793,168 @@ function onWindowResize() {
     uniforms.resolution.value.y = window.innerHeight;
 }
 
-function animate(timestamp) {
-    requestAnimationFrame(animate);
-    
-    // Update FPS monitoring
-    updateFPS(timestamp);
-    
-    // Adaptive frame rate limiting for better performance
-    const targetFrameTime = batteryMode ? 33 : 16.67; // 30fps or 60fps
-    if (timestamp - lastFrameTime < targetFrameTime - 1) {
-        return; // Skip frame if we're running too fast
+// --- Optimized Animation Loop ---
+let animationId = null;
+let lastRenderTime = 0;
+let frameSkipCounter = 0;
+
+// Pre-allocated variables to reduce GC pressure
+const tempVec2 = new THREE.Vector2();
+
+function animate(currentTime) {
+    animationId = requestAnimationFrame(animate);
+
+    // Update FPS monitoring (less frequently to reduce overhead)
+    if (frameCount % 10 === 0) { // Update every 10 frames
+        updateFPS(currentTime);
+        updateDebugOverlay();
     }
-    
-    // Additional performance throttling for low-end devices
-    if (isMobile && qualityLevel === 'low' && timestamp - lastFrameTime < 20) {
-        return; // Extra throttling for mobile low quality (50fps max)
+    frameCount++;
+
+    // Dynamic frame rate targeting based on performance and device
+    let targetFPS = batteryMode ? 30 : isMobile ? 45 : 60;
+    const targetFrameTime = 1000 / targetFPS;
+
+    // Adaptive frame rate limiting with hysteresis
+    const timeSinceLastRender = currentTime - lastRenderTime;
+    if (timeSinceLastRender < targetFrameTime) {
+        // Skip frame but accumulate for quality adjustments
+        frameSkipCounter++;
+        if (frameSkipCounter > targetFPS * 0.5) { // If skipping too many frames
+            // Emergency quality reduction
+            if (qualityLevel !== 'low' && fps < targetFPS * 0.8) {
+                qualityLevel = qualityLevel === 'ultra' ? 'high' : qualityLevel === 'high' ? 'medium' : 'low';
+                updateQualitySettings();
+                frameSkipCounter = 0;
+            }
+        }
+        return;
     }
-    
-    // High refresh rate display optimization (120Hz+)
-    const isHighRefresh = window.screen && window.screen.refreshRate > 90;
-    if (isHighRefresh && !batteryMode && timestamp - lastFrameTime < 12) {
-        return; // Limit to ~83fps even on 120Hz displays
+
+    frameSkipCounter = 0;
+    lastRenderTime = currentTime;
+
+    // Optimized uniform updates - only update what's needed
+    uniforms.time.value = currentTime * 0.001; // Convert to seconds
+
+    // Resolution update only when needed
+    if (Math.abs(uniforms.resolution.value.x - window.innerWidth) > 1 ||
+        Math.abs(uniforms.resolution.value.y - window.innerHeight) > 1) {
+        uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
     }
-    
-    lastFrameTime = timestamp;
-    uniforms.time.value = timestamp / 1000.0;
-    renderer.render(scene, camera);
+
+    // Render with error handling
+    try {
+        renderer.render(scene, camera);
+    } catch (error) {
+        console.warn('Render error:', error);
+        // Attempt recovery
+        if (error.name === 'ContextLostError') {
+            cancelAnimationFrame(animationId);
+            showDetailedNotification('⚠️ Graphics Error', 'Attempting to recover...', 2000);
+            setTimeout(() => location.reload(), 1000);
+        }
+    }
 }
 
+// --- Debug Overlay (optional) ---
+let debugOverlayEl = null;
+let debugEnabled = false;
+
+function setupDebugOverlay() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === 'fps') {
+        debugEnabled = true;
+    }
+    window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'd') {
+            debugEnabled = !debugEnabled;
+            if (!debugEnabled && debugOverlayEl) {
+                debugOverlayEl.remove();
+                debugOverlayEl = null;
+            }
+        }
+    });
+}
+
+function updateDebugOverlay() {
+    if (!debugEnabled) return;
+    if (!debugOverlayEl) {
+        debugOverlayEl = document.createElement('div');
+        debugOverlayEl.style.cssText = 'position:fixed;top:8px;left:8px;background:rgba(0,0,0,0.6);color:#0f0;padding:6px 8px;border-radius:6px;font:12px monospace;z-index:3000;pointer-events:none;white-space:pre;';
+        document.body.appendChild(debugOverlayEl);
+    }
+    const pr = renderer ? renderer.getPixelRatio() : (window.devicePixelRatio || 1);
+    debugOverlayEl.textContent = `FPS: ${fps}\nQuality: ${qualityLevel}\nDetail: ${uniforms.detail_level.value.toFixed(2)}\nIterations: ${uniforms.iteration_count.value.toFixed(0)}\nPixelRatio: ${pr.toFixed(2)}\nBattery: ${batteryMode}`;
+}
+
+// --- Memory Management & Cleanup ---
+function cleanup() {
+    // Cancel animation loop
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+
+    // Dispose of Three.js resources
+    if (renderer) {
+        renderer.dispose();
+    }
+
+    if (material) {
+        material.dispose();
+    }
+
+    if (scene) {
+        // Dispose of all geometries and materials in scene
+        scene.traverse((object) => {
+            if (object.geometry) {
+                object.geometry.dispose();
+            }
+            if (object.material) {
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(material => material.dispose());
+                } else {
+                    object.material.dispose();
+                }
+            }
+        });
+    }
+
+    // Clear global references
+    renderer = null;
+    scene = null;
+    camera = null;
+    material = null;
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanup);
+
+// Handle visibility change to pause/resume animation
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Page is hidden, pause animation
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    } else {
+        // Page is visible again, resume animation
+        if (!animationId) {
+            animate(performance.now());
+        }
+    }
+});
+
 // --- Initialization ---
-main(); 
+main();
+
+// Remove loading indicator after initialization
+setTimeout(() => {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.style.opacity = '0';
+        setTimeout(() => loading.remove(), 500);
+    }
+}, 100); 

@@ -58,14 +58,17 @@ and just may be in one of them, i do get to touch you.`
 
     // Create starry night background with performance optimization
     function createStarryNight() {
+        // Mount inside chat background when available so it stays behind UI
+        const mount = document.getElementById('mobile-body-bg') || document.body;
+
         const starsContainer = document.createElement('div');
         starsContainer.className = 'stars';
-        document.body.insertBefore(starsContainer, document.body.firstChild);
+        mount.appendChild(starsContainer);
 
         // Create moon
         const moon = document.createElement('div');
         moon.className = 'moon';
-        document.body.insertBefore(moon, document.body.firstChild);
+        mount.appendChild(moon);
 
         // Create anniversary badge
         const badge = document.createElement('div');
@@ -80,7 +83,9 @@ and just may be in one of them, i do get to touch you.`
         const fragment = document.createDocumentFragment();
         
         // Generate stars with optimized rendering
-        const numStars = 500;
+        // Reduce density on mobile only
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        const numStars = isMobile ? 180 : 500;
         for (let i = 0; i < numStars; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -95,8 +100,10 @@ and just may be in one of them, i do get to touch you.`
             star.style.height = size + 'px';
             
             // Random animation
+            // Longer, calmer animations on mobile to save battery and reduce jank
+            const animDur = isMobile ? (Math.random() * 3 + 4) : (Math.random() * 2 + 2);
             star.style.animationDelay = Math.random() * 5 + 's';
-            star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            star.style.animationDuration = animDur + 's';
             
             // Random opacity
             star.style.opacity = Math.random() * 0.8 + 0.2;
@@ -105,7 +112,7 @@ and just may be in one of them, i do get to touch you.`
         }
         
         // Add bright stars
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < (isMobile ? 15 : 30); i++) {
             const brightStar = document.createElement('div');
             brightStar.className = 'star bright-star';
             
@@ -128,7 +135,7 @@ and just may be in one of them, i do get to touch you.`
         
         // Add extra stars specifically for better distribution on larger screens
         const extraFragment = document.createDocumentFragment();
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < (isMobile ? 60 : 200); i++) {
             const star = document.createElement('div');
             star.className = 'star';
             
@@ -141,8 +148,9 @@ and just may be in one of them, i do get to touch you.`
             star.style.width = size + 'px';
             star.style.height = size + 'px';
             
+            const extraAnim = isMobile ? (Math.random() * 3 + 4) : (Math.random() * 2 + 2);
             star.style.animationDelay = Math.random() * 5 + 's';
-            star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            star.style.animationDuration = extraAnim + 's';
             star.style.opacity = Math.random() * 0.8 + 0.2;
             
             extraFragment.appendChild(star);
@@ -153,7 +161,10 @@ and just may be in one of them, i do get to touch you.`
         createClouds();
         
         // Start shooting stars
-        setInterval(createShootingStar, Math.random() * 10000 + 10000); // Every 10-20 seconds
+        // Shooting stars: decrease frequency on mobile to reduce work
+        const minInterval = isMobile ? 16000 : 10000;
+        const maxJitter = isMobile ? 14000 : 10000;
+        setInterval(createShootingStar, Math.random() * maxJitter + minInterval);
     }
 
     // Create drifting cloud wisps

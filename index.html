@@ -2,20 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Enter The Void and Fall With Me">
     <title>Into The Unknown</title>
+
+    <!-- Performance optimizations -->
+    <link rel="dns-prefetch" href="//unpkg.com">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+
+    <!-- Preload critical resources -->
+    <link rel="modulepreload" href="main.js">
+    <link rel="preload" href="https://unpkg.com/three@0.160.0/build/three.module.js" as="script" crossorigin>
+    <link rel="preload" href="https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.js" as="script" crossorigin>
+
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
         .lil-gui.root {
             background-color: rgba(0, 0, 0, 0.2);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border-radius: 10px;
         }
+        /* Loading indicator */
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 1000;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    <div id="loading">Loading...</div>
     <script type="importmap">
         {
             "imports": {
