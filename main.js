@@ -57,73 +57,49 @@ function detectMobile() {
     return isMobile;
 }
 
-// --- Enhanced Quality Settings ---
+// --- Quality Settings ---
 function updateQualitySettings() {
-    const wasUltra = uniforms.detail_level.value >= 1.2;
-
-    // Aggressive performance optimization based on device capabilities
-    const deviceMultiplier = isMobile ? 0.4 : batteryMode ? 0.6 : 1.0;
-
+    const wasUltra = uniforms.detail_level.value >= 2.0;
+    
     switch(qualityLevel) {
         case 'low':
-            uniforms.quality_factor.value = 0.15 * deviceMultiplier;
-            uniforms.iteration_count.value = isMobile ? 8.0 : 12.0;
-            uniforms.detail_level.value = 0.2;
+            uniforms.quality_factor.value = 0.25;
+            uniforms.iteration_count.value = isMobile ? 15.0 : 25.0;
+            uniforms.detail_level.value = 0.3;
             break;
         case 'medium':
-            uniforms.quality_factor.value = 0.35 * deviceMultiplier;
-            uniforms.iteration_count.value = isMobile ? 15.0 : 25.0;
-            uniforms.detail_level.value = 0.5;
+            uniforms.quality_factor.value = 0.5;
+            uniforms.iteration_count.value = isMobile ? 25.0 : 40.0;
+            uniforms.detail_level.value = 0.6;
             break;
         case 'high':
-            uniforms.quality_factor.value = 0.6 * deviceMultiplier;
-            uniforms.iteration_count.value = isMobile ? 25.0 : 45.0;
+            uniforms.quality_factor.value = 0.8;
+            uniforms.iteration_count.value = isMobile ? 40.0 : 60.0;
             uniforms.detail_level.value = 0.8;
             break;
         case 'ultra':
-            uniforms.quality_factor.value = 1.0 * deviceMultiplier;
-            uniforms.iteration_count.value = isMobile ? 35.0 : 65.0;
-            uniforms.detail_level.value = 1.2;
-
-            // Special welcome message for first-time ultra activation
+            uniforms.quality_factor.value = 1.0;
+            uniforms.iteration_count.value = isMobile ? 50.0 : 75.0;
+            uniforms.detail_level.value = 1.5;
+            
             if (!wasUltra) {
                 setTimeout(() => {
                     showDetailedNotification(
-                        '🌌 ULTRA MODE ACTIVATED',
+                        '🌌 ULTRA MODE ACTIVATED', 
                         '🌫️ Optimized Volumetric Effects\n☁️ Performance-Balanced Atmosphere\n🌅 Smooth Real-time Rendering\n✨ 60fps Ultra Experience\n🔬 Beautiful and Responsive!',
-                        4000
+                        5000
                     );
                 }, 500);
             }
             break;
     }
-
-    // Aggressive resolution-based scaling
+    
+    // Minimal resolution-based scaling (only for very high res)
     const screenArea = window.innerWidth * window.innerHeight;
-    const isVeryHighRes = screenArea > 3840 * 2160; // 4K
-    const isHighRes = screenArea > 1920 * 1080; // 1080p
-
-    if (isVeryHighRes) {
-        // Very aggressive scaling for 4K+ displays
-        uniforms.quality_factor.value *= 0.4;
-        uniforms.iteration_count.value *= 0.5;
-    } else if (isHighRes) {
-        // Scale down quality for high resolution displays
-        uniforms.quality_factor.value *= 0.6;
-        uniforms.iteration_count.value *= 0.7;
-    }
-
-    // Additional battery mode optimizations
-    if (batteryMode) {
-        uniforms.quality_factor.value *= 0.7;
-        uniforms.iteration_count.value *= 0.8;
-    }
-
-    // Performance monitoring integration
-    if (typeof fps !== 'undefined' && fps < 30 && qualityLevel !== 'low') {
-        // Emergency quality reduction
-        uniforms.quality_factor.value *= 0.8;
-        uniforms.detail_level.value *= 0.9;
+    const isHighRes = screenArea > 2073600; // 1920x1080
+    
+    if (isHighRes && !isMobile) {
+        uniforms.quality_factor.value *= 0.9;
     }
 }
 
@@ -261,48 +237,13 @@ function triggerTransformation() {
     transform_controls.transform();
 }
 
-// --- FPS Monitoring with Adaptive Quality ---
+// --- FPS Monitoring (No Auto-Adjust) ---
 function updateFPS(timestamp) {
     frameCount++;
     if (timestamp - lastFrameTime >= 1000) {
         fps = frameCount;
         frameCount = 0;
         lastFrameTime = timestamp;
-        
-        // Adaptive quality reduction for poor performance
-        if (!batteryMode) {
-            if (fps < 25 && qualityLevel === 'ultra') {
-                qualityLevel = 'high';
-                updateQualitySettings();
-                showDetailedNotification('Auto Quality: High', '⚡ Reduced from Ultra for smoother performance');
-            } else if (fps < 20 && qualityLevel === 'high') {
-                qualityLevel = 'medium';
-                updateQualitySettings();
-                showDetailedNotification('Auto Quality: Medium', '⚡ Optimizing for better frame rate');
-            } else if (fps < 15 && qualityLevel === 'medium') {
-                qualityLevel = 'low';
-                updateQualitySettings();
-                showDetailedNotification('Auto Quality: Low', '⚡ Maximum optimization for stability');
-            }
-        }
-        
-        // Auto-upgrade quality if performance is good
-        if (fps > 55 && qualityLevel === 'low' && !batteryMode) {
-            qualityLevel = 'medium';
-            updateQualitySettings();
-            showDetailedNotification('Auto Quality: Medium', '✨ Performance improved - upgrading quality');
-        } else if (fps > 58 && qualityLevel === 'medium' && !batteryMode) {
-            qualityLevel = 'high';
-            updateQualitySettings();
-            showDetailedNotification('Auto Quality: High', '✨ Excellent performance - upgrading quality');
-        }
-        
-        // Battery mode performance optimization
-        if (batteryMode && fps < 30 && qualityLevel !== 'low') {
-            qualityLevel = 'low';
-            updateQualitySettings();
-            showDetailedNotification('Battery Mode: Quality Reduced', '🔋 Optimizing for battery life');
-        }
     }
 }
 
@@ -615,10 +556,6 @@ function performTransformation() {
 function main() {
     // Initialize mobile detection and settings
     detectMobile();
-    // Ensure mobile starts at a conservative quality
-    if (isMobile && qualityLevel !== 'low') {
-        qualityLevel = 'medium';
-    }
     updateQualitySettings();
     
     // --- Shader Compilation ---
@@ -666,72 +603,22 @@ function main() {
         setupTouchGestures();
     }
     
-    
-    
     // --- Start Animation Loop ---
     animate(0);
-
-    // Optional debug overlay (toggle with ?debug=fps or press 'd')
-    setupDebugOverlay();
 }
 
  
 
 function init(fragmentShader) {
-    // Optimized WebGL context creation
-    const contextAttributes = {
-        alpha: false, // No alpha channel needed
-        depth: false, // No depth buffer needed for 2D shader
-        stencil: false, // No stencil buffer needed
-        antialias: qualityLevel === 'ultra' && !isMobile, // Only ultra quality gets antialiasing
-        powerPreference: batteryMode ? "low-power" : "high-performance",
-        failIfMajorPerformanceCaveat: false, // Don't fail on slow GPUs
-        desynchronized: true // Reduce latency
-    };
-
-    renderer = new THREE.WebGLRenderer({
-        context: null, // Let Three.js create the context
-        ...contextAttributes
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: !isMobile,
+        powerPreference: batteryMode ? "low-power" : "high-performance"
     });
-
-    // Aggressive pixel ratio optimization
-    let pixelRatio = window.devicePixelRatio || 1;
-
-    if (isMobile) {
-        // More aggressive mobile optimization
-        pixelRatio = Math.min(pixelRatio, qualityLevel === 'low' ? 1 : 2);
-    } else {
-        // Desktop optimization
-        pixelRatio = Math.min(pixelRatio, qualityLevel === 'ultra' ? pixelRatio : Math.min(pixelRatio, 2));
-    }
-
-    // High refresh rate display optimization
-    const isHighRefresh = window.screen && window.screen.refreshRate > 90;
-    if (isHighRefresh && !batteryMode) {
-        pixelRatio = Math.min(pixelRatio, 1.5); // Limit pixel ratio on high refresh displays
-    }
-
-    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // Performance optimizations
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.NoToneMapping; // No tone mapping for performance
-    renderer.shadowMap.enabled = false; // No shadows needed
-    renderer.sortObjects = false; // No object sorting needed
-
-    // Context loss handling
-    renderer.domElement.addEventListener('webglcontextlost', (event) => {
-        event.preventDefault();
-        showDetailedNotification('⚠️ Graphics Context Lost', 'Restarting renderer...', 3000);
-        setTimeout(() => location.reload(), 1000);
-    });
-
-    renderer.domElement.addEventListener('webglcontextrestored', () => {
-        showDetailedNotification('✅ Graphics Context Restored', 'Renderer restarted successfully', 2000);
-        init(fragmentShader); // Reinitialize
-    });
-
+    
+    const pixelRatio = isMobile ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio;
+    renderer.setPixelRatio(pixelRatio);
+    
     document.body.appendChild(renderer.domElement);
 
     scene = new THREE.Scene();
@@ -746,12 +633,7 @@ function init(fragmentShader) {
         fragmentShader: fragmentShader,
     });
 
-    // Optimized geometry - use a simple plane with minimal vertices
-    const geometry = new THREE.PlaneGeometry(2, 2, 1, 1); // Reduced segments for performance
-    geometry.computeBoundingSphere(); // Pre-compute bounds
-
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.frustumCulled = false; // Disable frustum culling for full-screen quad
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     scene.add(mesh);
 
     // --- Enhanced GUI Setup ---
@@ -793,168 +675,11 @@ function onWindowResize() {
     uniforms.resolution.value.y = window.innerHeight;
 }
 
-// --- Optimized Animation Loop ---
-let animationId = null;
-let lastRenderTime = 0;
-let frameSkipCounter = 0;
-
-// Pre-allocated variables to reduce GC pressure
-const tempVec2 = new THREE.Vector2();
-
-function animate(currentTime) {
-    animationId = requestAnimationFrame(animate);
-
-    // Update FPS monitoring (less frequently to reduce overhead)
-    if (frameCount % 10 === 0) { // Update every 10 frames
-        updateFPS(currentTime);
-        updateDebugOverlay();
-    }
-    frameCount++;
-
-    // Dynamic frame rate targeting based on performance and device
-    let targetFPS = batteryMode ? 30 : isMobile ? 45 : 60;
-    const targetFrameTime = 1000 / targetFPS;
-
-    // Adaptive frame rate limiting with hysteresis
-    const timeSinceLastRender = currentTime - lastRenderTime;
-    if (timeSinceLastRender < targetFrameTime) {
-        // Skip frame but accumulate for quality adjustments
-        frameSkipCounter++;
-        if (frameSkipCounter > targetFPS * 0.5) { // If skipping too many frames
-            // Emergency quality reduction
-            if (qualityLevel !== 'low' && fps < targetFPS * 0.8) {
-                qualityLevel = qualityLevel === 'ultra' ? 'high' : qualityLevel === 'high' ? 'medium' : 'low';
-                updateQualitySettings();
-                frameSkipCounter = 0;
-            }
-        }
-        return;
-    }
-
-    frameSkipCounter = 0;
-    lastRenderTime = currentTime;
-
-    // Optimized uniform updates - only update what's needed
-    uniforms.time.value = currentTime * 0.001; // Convert to seconds
-
-    // Resolution update only when needed
-    if (Math.abs(uniforms.resolution.value.x - window.innerWidth) > 1 ||
-        Math.abs(uniforms.resolution.value.y - window.innerHeight) > 1) {
-        uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
-    }
-
-    // Render with error handling
-    try {
-        renderer.render(scene, camera);
-    } catch (error) {
-        console.warn('Render error:', error);
-        // Attempt recovery
-        if (error.name === 'ContextLostError') {
-            cancelAnimationFrame(animationId);
-            showDetailedNotification('⚠️ Graphics Error', 'Attempting to recover...', 2000);
-            setTimeout(() => location.reload(), 1000);
-        }
-    }
+function animate(timestamp) {
+    requestAnimationFrame(animate);
+    uniforms.time.value = timestamp / 1000.0;
+    renderer.render(scene, camera);
 }
-
-// --- Debug Overlay (optional) ---
-let debugOverlayEl = null;
-let debugEnabled = false;
-
-function setupDebugOverlay() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('debug') === 'fps') {
-        debugEnabled = true;
-    }
-    window.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'd') {
-            debugEnabled = !debugEnabled;
-            if (!debugEnabled && debugOverlayEl) {
-                debugOverlayEl.remove();
-                debugOverlayEl = null;
-            }
-        }
-    });
-}
-
-function updateDebugOverlay() {
-    if (!debugEnabled) return;
-    if (!debugOverlayEl) {
-        debugOverlayEl = document.createElement('div');
-        debugOverlayEl.style.cssText = 'position:fixed;top:8px;left:8px;background:rgba(0,0,0,0.6);color:#0f0;padding:6px 8px;border-radius:6px;font:12px monospace;z-index:3000;pointer-events:none;white-space:pre;';
-        document.body.appendChild(debugOverlayEl);
-    }
-    const pr = renderer ? renderer.getPixelRatio() : (window.devicePixelRatio || 1);
-    debugOverlayEl.textContent = `FPS: ${fps}\nQuality: ${qualityLevel}\nDetail: ${uniforms.detail_level.value.toFixed(2)}\nIterations: ${uniforms.iteration_count.value.toFixed(0)}\nPixelRatio: ${pr.toFixed(2)}\nBattery: ${batteryMode}`;
-}
-
-// --- Memory Management & Cleanup ---
-function cleanup() {
-    // Cancel animation loop
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-    }
-
-    // Dispose of Three.js resources
-    if (renderer) {
-        renderer.dispose();
-    }
-
-    if (material) {
-        material.dispose();
-    }
-
-    if (scene) {
-        // Dispose of all geometries and materials in scene
-        scene.traverse((object) => {
-            if (object.geometry) {
-                object.geometry.dispose();
-            }
-            if (object.material) {
-                if (Array.isArray(object.material)) {
-                    object.material.forEach(material => material.dispose());
-                } else {
-                    object.material.dispose();
-                }
-            }
-        });
-    }
-
-    // Clear global references
-    renderer = null;
-    scene = null;
-    camera = null;
-    material = null;
-}
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', cleanup);
-
-// Handle visibility change to pause/resume animation
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        // Page is hidden, pause animation
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
-    } else {
-        // Page is visible again, resume animation
-        if (!animationId) {
-            animate(performance.now());
-        }
-    }
-});
 
 // --- Initialization ---
-main();
-
-// Remove loading indicator after initialization
-setTimeout(() => {
-    const loading = document.getElementById('loading');
-    if (loading) {
-        loading.style.opacity = '0';
-        setTimeout(() => loading.remove(), 500);
-    }
-}, 100); 
+main(); 
