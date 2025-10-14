@@ -367,40 +367,28 @@ const tunnel_shader_code = `
     vec4 get_tunnel_color(vec2 u, float t) {
         vec4 fragColor = vec4(0.0);
         float d = 0.0;
-
-        // Quality-based iteration count
-        float maxIterations = detail_level >= 1.0 ? 60.0 : detail_level >= 0.6 ? 40.0 : 25.0;
-
-        for (float i = 0.0; i < 60.0; i++) {
-            if (i >= maxIterations) break;
-
+        for (float i = 0.0; i < 100.0; i++) {
             vec3 p = vec3(u * d, d + t * 2.0);
             float angle = p.z * 0.2;
             p.xy *= mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-
             float s = sin(p.y + p.x);
-
-            // Simplified inner loop for performance
-            if (detail_level >= 0.8) {
-                for (float n = 1.0; n < 16.0; n += n) {
-                    s -= abs(dot(cos(0.3 * t + p * n), vec3(0.3))) / n;
-                }
+            for (float n = 1.0; n < 32.0; n += n) {
+                s -= abs(dot(cos(0.3 * t + p * n), vec3(0.3))) / n;
             }
-
             s = 0.01 + abs(s) * 0.8;
             d += s;
             fragColor += vec4(0.1 / s);
         }
-
-        vec4 result = tanh(fragColor / 15000.0 / length(u));
-
+        
+        vec4 result = tanh(fragColor / 20000.0 / length(u));
+        
         // Ultra quality: Add volumetric atmosphere overlay
         if (detail_level >= 1.2) {
             vec3 rayDir = normalize(vec3(u, 1.0));
             vec4 atmosphere = get_volumetric_atmosphere(u, rayDir, t);
-            result = mix(result, atmosphere, atmosphere.a * 0.15);
+            result = mix(result, atmosphere, atmosphere.a * 0.2);
         }
-
+        
         return result;
     }
 `;
