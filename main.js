@@ -467,24 +467,10 @@ function updateEducationalContent() {
     if (!educationalPanel || isLoadingFact) return;
     
     const fact = cosmicFacts[currentFactIndex];
-    const isPremiumAI = fact.source && fact.source.includes('OpenRouter');
-    const isCurated = !fact.source || fact.source.includes('Curated') || fact.source.includes('Enhanced Static');
-    
-    let sourceLabel = '';
-    if (isPremiumAI) {
-        sourceLabel = '<span style="font-size: 12px; background: rgba(255,215,0,0.2); padding: 2px 6px; border-radius: 10px; color: #FFD700;">⭐ Premium AI</span>';
-    } else if (isCurated) {
-        sourceLabel = '<span style="font-size: 12px; background: rgba(129,199,132,0.2); padding: 2px 6px; border-radius: 10px; color: #81c784;">📚 Curated</span>';
-    }
-    
-    const statusText = AI_CONFIG.apiStatus.hasServerlessAPI 
-        ? 'Premium AI + Curated content' 
-        : 'Curated content available';
     
     educationalPanel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="margin: 0; color: #64b5f6;">${fact.title}</h3>
-            ${sourceLabel}
         </div>
         <p style="margin: 0 0 15px 0; line-height: 1.5;">${fact.content}</p>
         <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
@@ -506,7 +492,7 @@ function updateEducationalContent() {
                     cursor: pointer;
                     font-weight: bold;
                     margin-right: 5px;
-                ">⭐ Generate Premium Fact</button>
+                ">✨ Generate Fact</button>
                 <button onclick="forceRefreshFacts()" style="
                     background: linear-gradient(45deg, #ff9800, #f57c00);
                     border: none;
@@ -519,7 +505,7 @@ function updateEducationalContent() {
                 ">🔄 Refresh</button>
             </div>
             <div style="margin-top: 8px; text-align: center; font-size: 0.7em; color: #888;">
-                Swipe left/right for more • ${statusText}
+                Swipe left/right for more
             </div>
         </div>
     `;
@@ -1018,23 +1004,11 @@ async function initializeAIFeatures() {
     // Check if serverless API is available
     const hasAPI = await checkServerlessAPIAvailability();
     
-    let welcomeMessage = '🚀 Welcome to Cosmic Explorer!';
-    let detailMessage = '🌌 Journey through space with Ultra visuals\n';
-    
     if (hasAPI) {
-        detailMessage += '⭐ PREMIUM: Secure OpenRouter AI integration\n📡 Real AI-powered cosmic education (Moonshot AI Kimi K2)\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
         AI_CONFIG.mode = 'hybrid';
     } else {
-        detailMessage += '📚 CURATED: High-quality space facts\n🔬 Scientifically accurate content\n✨ No internet required\n📖 Expertly crafted educational content\n';
         AI_CONFIG.mode = 'hybrid';
     }
-    
-    detailMessage += '\nSwipe down or use the Education panel to explore!';
-    
-    // Show welcome message about AI features
-    setTimeout(() => {
-        showDetailedNotification(welcomeMessage, detailMessage, 8000);
-    }, 3000);
     
     // Initialize AI system
     setTimeout(() => {
@@ -1065,24 +1039,7 @@ async function initializeAISystem() {
         // Report initialization results
         if (apiCount > 0) {
             AI_CONFIG.apiStatus.isWorking = true;
-            showDetailedNotification(
-                '⭐ Premium AI Ready!', 
-                `✅ Secure OpenRouter API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active (Moonshot AI Kimi K2)\n⚡ Premium fact generation ready\n📚 High-quality curated content available\n⏱️ Response time: 15-30 seconds`,
-                4000
-            );
-        } else {
-            showDetailedNotification(
-                '📚 Cosmic Facts Ready!', 
-                `🔬 High-quality curated content\n📖 Expertly crafted space facts\n⚡ Instant access to cosmic knowledge`,
-                3000
-            );
         }
-    } else {
-        showDetailedNotification(
-            '📚 Cosmic Facts Ready!', 
-            `🔬 High-quality curated content\n📖 Expertly crafted space facts\n⚡ Instant access to cosmic knowledge`,
-            3000
-        );
     }
 }
 
@@ -1319,13 +1276,12 @@ function showFactLoadingState() {
     
     educationalPanel.innerHTML = `
         <div style="text-align: center; padding: 20px;">
-            <div style="font-size: 24px; margin-bottom: 15px;">⭐</div>
-            <h3 style="margin: 0 0 10px 0; color: #64b5f6;">Generating Premium Fact...</h3>
+            <div style="font-size: 24px; margin-bottom: 15px;">✨</div>
+            <h3 style="margin: 0 0 10px 0; color: #64b5f6;">Generating Fact...</h3>
             <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
                 <div style="width: 0%; height: 100%; background: #64b5f6; border-radius: 2px; animation: loading 2s ease-in-out;" id="loading-bar"></div>
             </div>
-            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure OpenRouter API (Moonshot AI Kimi K2)...</p>
-            <p style="margin: 5px 0 0 0; font-size: 10px; color: #999;">This may take 15-30 seconds for high quality AI generation</p>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Loading cosmic knowledge...</p>
         </div>
         <style>
             @keyframes loading {
@@ -1345,11 +1301,11 @@ function showFactLoadingStateWithRetry(attempt) {
     educationalPanel.innerHTML = `
         <div style="text-align: center; padding: 20px;">
             <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
-            <h3 style="margin: 0 0 10px 0; color: #ff9800;">Retrying OpenRouter API (Attempt ${attempt})...</h3>
+            <h3 style="margin: 0 0 10px 0; color: #ff9800;">Retrying (Attempt ${attempt})...</h3>
             <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
                 <div style="width: 0%; height: 100%; background: #ff9800; border-radius: 2px; animation: loading 1s ease-in-out;" id="loading-bar"></div>
             </div>
-            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Attempting to connect to OpenRouter API...</p>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Attempting to load content...</p>
         </div>
         <style>
             @keyframes loading {
@@ -1451,56 +1407,33 @@ function init(fragmentShader) {
     aiFolder.add(education_controls, 'clearAIFacts').name('Clear AI Facts');
     aiFolder.add(education_controls, 'forceRefresh').name('Force Refresh Facts');
     
-    // Add info about AI features
-    const aiInfo = {
+    // Add info about features
+    const infoControls = {
         about: () => {
-            let title, content;
-            
-            if (AI_CONFIG.apiStatus.hasServerlessAPI) {
-                title = '⭐ Premium OpenRouter AI System';
-                content = `⭐ Secure OpenRouter API integration
-🔒 API keys safely secured on server
-📡 Real AI language model - Moonshot AI Kimi K2
-🎯 High-quality fact generation (${AI_CONFIG.rateLimit.maxCallsPerMinute}/min limit)
-⏱️ Response time: 15-30 seconds per fact
-📚 Curated content backup
-🌟 Best cosmic education experience`;
-            } else {
-                title = '📚 Curated Content System';
-                content = `📖 High-quality curated space facts
+            let title = '📚 Cosmic Facts';
+            let content = `📖 High-quality space facts
 🔬 Scientifically accurate content
-⚡ Instant access - no waiting
-💾 Works completely offline
-🎯 Expert-crafted educational content
-🌟 Reliable cosmic knowledge`;
-            }
+⚡ Instant access
+🎯 Educational cosmic content
+🌟 Explore the universe`;
             
-            showDetailedNotification(title, content, 7000);
+            showDetailedNotification(title, content, 5000);
         },
         
         status: () => {
             const status = AI_CONFIG.apiStatus;
-            const rateLimit = AI_CONFIG.rateLimit;
-            const remainingCalls = rateLimit.maxCallsPerMinute - rateLimit.callHistory.length;
             
             let statusText = `🔍 System Status:
 Mode: ${AI_CONFIG.mode.toUpperCase()}
-OpenRouter API: ${status.hasServerlessAPI ? '✅ Available' : '❌ Unavailable'}
 Error Count: ${status.errorCount}
-Using Fallback: ${status.usingFallback ? 'Yes (Curated Content)' : 'No'}
-Timeout Setting: ${AI_CONFIG.timeout / 1000}s
-Retry Attempts: ${AI_CONFIG.retryAttempts}`;
-
-            if (status.hasServerlessAPI) {
-                statusText += `\nAPI Calls Remaining: ${remainingCalls}/${rateLimit.maxCallsPerMinute}`;
-            }
+Timeout Setting: ${AI_CONFIG.timeout / 1000}s`;
             
-            showDetailedNotification('📊 System Status', statusText, 5000);
+            showDetailedNotification('📊 System Status', statusText, 4000);
         }
     };
     
-    aiFolder.add(aiInfo, 'about').name('ℹ️ About System');
-    aiFolder.add(aiInfo, 'status').name('📊 System Status');
+    aiFolder.add(infoControls, 'about').name('ℹ️ About System');
+    aiFolder.add(infoControls, 'status').name('📊 System Status');
     
     eduFolder.open();
     aiFolder.open();
@@ -1523,17 +1456,12 @@ Retry Attempts: ${AI_CONFIG.retryAttempts}`;
             backdrop-filter: blur(5px);
         `;
         
-        const aiModeText = AI_CONFIG.apiStatus.hasServerlessAPI 
-            ? '⭐ OpenRouter AI active!' 
-            : '📚 Curated content active!';
-            
         instructions.innerHTML = `
             📱 Touch Controls:<br>
             ↕️ Swipe up: Transform • Swipe down: Facts<br>
             ↔️ Swipe left/right: Navigate facts<br>
             👆👆 Double tap: Cycle quality (includes Ultra!)<br>
-            🌫️ Ultra mode: Full volumetric atmosphere<br>
-            ${aiModeText}
+            🌫️ Ultra mode: Full volumetric atmosphere
         `;
         document.body.appendChild(instructions);
         
