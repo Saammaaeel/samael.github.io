@@ -12,10 +12,6 @@ let is_transitioning = false;
 let shader_index = 0;
 let isMobile = false;
 let qualityLevel = 'high'; // 'low', 'medium', 'high', 'ultra'
-let batteryMode = false;
-let lastFrameTime = 0;
-let frameCount = 0;
-let fps = 60;
 
 // --- Touch Gesture Variables ---
 let touchStartX = 0;
@@ -42,18 +38,6 @@ const uniforms = {
 function detectMobile() {
     isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
-    
-    // Detect battery API for power-conscious rendering
-    if ('getBattery' in navigator) {
-        navigator.getBattery().then(battery => {
-            batteryMode = battery.level < 0.3 || !battery.charging;
-            if (batteryMode) {
-                qualityLevel = 'low';
-                updateQualitySettings();
-            }
-        });
-    }
-    
     return isMobile;
 }
 
@@ -86,20 +70,12 @@ function updateQualitySettings() {
                 setTimeout(() => {
                     showDetailedNotification(
                         '🌌 ULTRA MODE ACTIVATED', 
-                        '🌫️ Optimized Volumetric Effects\n☁️ Performance-Balanced Atmosphere\n🌅 Smooth Real-time Rendering\n✨ 60fps Ultra Experience\n🔬 Beautiful and Responsive!',
-                        5000
+                        '🌫️ Volumetric Atmosphere\n☁️ Multi-layer Clouds\n🌅 Physics-based Scattering\n✨ Enhanced Visual Effects',
+                        4000
                     );
                 }, 500);
             }
             break;
-    }
-    
-    // Minimal resolution-based scaling (only for very high res)
-    const screenArea = window.innerWidth * window.innerHeight;
-    const isHighRes = screenArea > 2073600; // 1920x1080
-    
-    if (isHighRes && !isMobile) {
-        uniforms.quality_factor.value *= 0.9;
     }
 }
 
@@ -126,9 +102,7 @@ function setupTouchGestures() {
         
         if (distance > 50) { // Minimum swipe distance
             isSwipeDetected = true;
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                // Horizontal swipe disabled
-                } else {
+            if (Math.abs(deltaY) > Math.abs(deltaX)) {
                 // Vertical swipe: swipe up triggers transformation
                 if (deltaY < 0) {
                     triggerTransformation();
@@ -154,21 +128,19 @@ function setupTouchGestures() {
     });
 }
 
-
-
 function cycleQuality() {
     const qualities = ['low', 'medium', 'high', 'ultra'];
     const currentIndex = qualities.indexOf(qualityLevel);
     qualityLevel = qualities[(currentIndex + 1) % qualities.length];
     updateQualitySettings();
     
-    // Show enhanced quality notification with details
+    // Show quality notification
     let message = `Quality: ${qualityLevel.toUpperCase()}`;
     let details = '';
     
     switch(qualityLevel) {
         case 'ultra':
-            details = '\n🌫️ Volumetric Atmosphere\n☁️ Multi-layer Clouds\n🌅 Physics-based Scattering\n✨ God Rays & Full-screen Effects';
+            details = '\n🌫️ Volumetric Atmosphere\n☁️ Multi-layer Clouds\n🌅 Physics-based Scattering\n✨ God Rays & Effects';
             break;
         case 'high':
             details = '\n🎯 Maximum Detail\n🔥 Enhanced Effects';
@@ -177,7 +149,7 @@ function cycleQuality() {
             details = '\n⚖️ Balanced Performance';
             break;
         case 'low':
-            details = '\n⚡ Optimized Speed\n🔋 Battery Friendly';
+            details = '\n⚡ Optimized Speed';
             break;
     }
     
@@ -237,16 +209,6 @@ function triggerTransformation() {
     transform_controls.transform();
 }
 
-// --- FPS Monitoring (No Auto-Adjust) ---
-function updateFPS(timestamp) {
-    frameCount++;
-    if (timestamp - lastFrameTime >= 1000) {
-        fps = frameCount;
-        frameCount = 0;
-        lastFrameTime = timestamp;
-    }
-}
-
 // =============================================================================
 // SHADER CODE & GRAPHICS
 // =============================================================================
@@ -265,7 +227,7 @@ const volumetric_atmosphere_code = `
     // Highly optimized atmospheric scattering
     vec3 rayleigh_scattering(float cosTheta) {
         float phase = 1.0 + cosTheta * cosTheta;
-        return vec3(0.58, 1.35, 3.31) * phase * 0.03; // Reduced intensity
+        return vec3(0.58, 1.35, 3.31) * phase * 0.03;
     }
 
     vec3 mie_scattering(float cosTheta, float g) {
@@ -313,7 +275,7 @@ const volumetric_atmosphere_code = `
 
         // Optimized atmospheric density calculation
         float altitude = rayDir.y * 0.5 + 0.5;
-        float density = exp(-altitude * 2.0); // Reduced multiplier for performance
+        float density = exp(-altitude * 2.0);
 
         // Simplified cloud calculation
         vec3 cloudPos = rayDir * 50.0 + vec3(time * 1.2, time * 0.2, time * 0.8);
@@ -445,13 +407,13 @@ vec4 get_singularity_color(vec2 fragCoord, vec2 resolution, float time) {
 const transition_shader_code = `
     vec4 get_transition_color(vec2 fragCoord, vec2 resolution, float time) {
         vec2 uv = (fragCoord / resolution) * 2.0 - 1.0;
-        float t = (time - 2.0) * 45.0; // Reduced speed for performance
+        float t = (time - 2.0) * 45.0;
         vec3 col = vec3(0.0);
         vec3 init = vec3(sin(t * 0.0032) * 0.3, 0.35 - cos(t * 0.005) * 0.3, t * 0.002);
 
         // Quality-based outer loop count
         int maxR = detail_level >= 1.0 ? 60 : detail_level >= 0.6 ? 40 : 25;
-        float stepSize = detail_level >= 1.0 ? 0.025 : 0.035; // Larger steps for lower quality
+        float stepSize = detail_level >= 1.0 ? 0.025 : 0.035;
 
         for (int r = 0; r < 60; r++) {
             if (r >= maxR) break;
@@ -489,7 +451,7 @@ const transition_shader_code = `
     }
 `;
 
-// --- Performance Transformation Function ---
+// --- Transformation Function ---
 function performTransformation() {
     if (is_transitioning) return;
     is_transitioning = true;
@@ -562,7 +524,7 @@ function main() {
         ${singularity_shader_code}
         ${transition_shader_code}
 
-        // --- Main Shader Logic (Performance Optimized) ---
+        // --- Main Shader Logic ---
         void main() {
             vec2 res_coord = gl_FragCoord.xy;
             vec2 u = (res_coord - 0.5 * resolution.xy) / resolution.y;
@@ -595,12 +557,10 @@ function main() {
     animate(0);
 }
 
- 
-
 function init(fragmentShader) {
     renderer = new THREE.WebGLRenderer({ 
         antialias: !isMobile,
-        powerPreference: batteryMode ? "low-power" : "high-performance"
+        powerPreference: "high-performance"
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     
@@ -624,7 +584,7 @@ function init(fragmentShader) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     scene.add(mesh);
 
-    // --- Enhanced GUI Setup ---
+    // --- GUI Setup ---
     const gui = new GUI();
     
     // Transform control
@@ -635,24 +595,13 @@ function init(fragmentShader) {
     
     // Quality controls
     const quality_controls = {
-        quality: qualityLevel,
-        batteryMode: batteryMode
+        quality: qualityLevel
     };
     
     gui.add(quality_controls, 'quality', ['low', 'medium', 'high', 'ultra']).onChange((value) => {
         qualityLevel = value;
         updateQualitySettings();
-    }).name('🎮 Quality (Ultra = Volumetric)');
-    
-    gui.add(quality_controls, 'batteryMode').onChange((value) => {
-        batteryMode = value;
-        if (value) {
-            qualityLevel = 'low';
-            updateQualitySettings();
-        }
-    }).name('🔋 Battery Mode');
-    
-    
+    }).name('🎮 Quality');
 
     window.addEventListener('resize', onWindowResize, false);
 }
@@ -670,4 +619,4 @@ function animate(timestamp) {
 }
 
 // --- Initialization ---
-main(); 
+main();
