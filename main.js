@@ -220,17 +220,6 @@ function updateQualitySettings() {
             uniforms.quality_factor.value = 1.0;
             uniforms.iteration_count.value = isMobile ? 50.0 : 75.0; // Reduced from 150
             uniforms.detail_level.value = 1.5; // Reduced from 2.0
-            
-            // Special welcome message for first-time ultra activation
-            if (!wasUltra) {
-                setTimeout(() => {
-                    showDetailedNotification(
-                        '🌌 ULTRA MODE ACTIVATED', 
-                        '🌫️ Optimized Volumetric Effects\n☁️ Performance-Balanced Atmosphere\n🌅 Smooth Real-time Rendering\n✨ 60fps Ultra Experience\n🔬 Beautiful and Responsive!',
-                        5000
-                    );
-                }, 500);
-            }
             break;
     }
     
