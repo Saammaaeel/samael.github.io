@@ -1,3 +1,23 @@
+/**
+ * ============================================================================
+ * COSMIC EXPLORER - Into The Unknown
+ * ============================================================================
+ * A high-performance WebGL cosmic visualization
+ * 
+ * Features:
+ * - Ultra quality volumetric atmospheric effects
+ * - Adaptive performance optimization (auto-quality adjustment)
+ * - Mobile-optimized touch controls
+ * - Real-time shader transformations between tunnel/singularity effects
+ * 
+ * Performance Optimizations:
+ * - Reduced shader iterations (75 max vs 150)
+ * - Optimized FBM noise (4 octaves max vs 8)
+ * - Adaptive quality based on FPS monitoring
+ * - Mobile-specific optimizations and throttling
+ * ============================================================================
+ */
+
 import * as THREE from 'three';
 import { GUI } from 'lil-gui';
 
@@ -33,7 +53,6 @@ const uniforms = {
     detail_level: { value: 1.0 }
 };
 
-
 // =============================================================================
 // DEVICE DETECTION & PERFORMANCE
 // =============================================================================
@@ -61,6 +80,7 @@ function detectMobile() {
 function updateQualitySettings() {
     const wasUltra = uniforms.detail_level.value >= 2.0;
     
+    // More aggressive performance optimization
     switch(qualityLevel) {
         case 'low':
             uniforms.quality_factor.value = 0.25;
@@ -79,9 +99,10 @@ function updateQualitySettings() {
             break;
         case 'ultra':
             uniforms.quality_factor.value = 1.0;
-            uniforms.iteration_count.value = isMobile ? 50.0 : 75.0;
-            uniforms.detail_level.value = 1.5;
+            uniforms.iteration_count.value = isMobile ? 50.0 : 75.0; // Reduced from 150
+            uniforms.detail_level.value = 1.5; // Reduced from 2.0
             
+            // Special welcome message for first-time ultra activation
             if (!wasUltra) {
                 setTimeout(() => {
                     showDetailedNotification(
@@ -94,13 +115,19 @@ function updateQualitySettings() {
             break;
     }
     
-    // Minimal resolution-based scaling (only for very high res)
+    // Adaptive quality based on screen size and device
     const screenArea = window.innerWidth * window.innerHeight;
     const isHighRes = screenArea > 2073600; // 1920x1080
     
     if (isHighRes && !isMobile) {
-        uniforms.quality_factor.value *= 0.9;
+        // Scale down quality for high resolution displays
+        uniforms.quality_factor.value *= 0.7;
+        uniforms.iteration_count.value *= 0.8;
     }
+    
+    // Add resolution-based scaling
+    const resolutionScale = Math.min(1.0, 1920 / window.innerWidth);
+    uniforms.quality_factor.value *= resolutionScale;
 }
 
 // --- Touch Gesture Handling ---
@@ -126,11 +153,10 @@ function setupTouchGestures() {
         
         if (distance > 50) { // Minimum swipe distance
             isSwipeDetected = true;
-            if (Math.abs(deltaY) > Math.abs(deltaX)) {
-                // Vertical swipe: swipe up triggers transformation
-                if (deltaY < 0) {
-                    triggerTransformation();
-                }
+            
+            // Vertical swipe up - trigger transformation
+            if (Math.abs(deltaY) > Math.abs(deltaX) && deltaY < 0) {
+                triggerTransformation();
             }
         }
     }, { passive: false });
@@ -233,7 +259,7 @@ function triggerTransformation() {
     transform_controls.transform();
 }
 
-// --- FPS Monitoring (No Auto-Adjust) ---
+// --- FPS Monitoring with Adaptive Quality ---
 function updateFPS(timestamp) {
     frameCount++;
     if (timestamp - lastFrameTime >= 1000) {
@@ -241,8 +267,40 @@ function updateFPS(timestamp) {
         frameCount = 0;
         lastFrameTime = timestamp;
         
-        // FPS monitoring only - NO AUTO-ADJUST
-        // Just track FPS for display/debugging purposes
+        // Adaptive quality reduction for poor performance
+        if (!batteryMode) {
+            if (fps < 25 && qualityLevel === 'ultra') {
+                qualityLevel = 'high';
+                updateQualitySettings();
+                showDetailedNotification('Auto Quality: High', '⚡ Reduced from Ultra for smoother performance');
+            } else if (fps < 20 && qualityLevel === 'high') {
+                qualityLevel = 'medium';
+                updateQualitySettings();
+                showDetailedNotification('Auto Quality: Medium', '⚡ Optimizing for better frame rate');
+            } else if (fps < 15 && qualityLevel === 'medium') {
+                qualityLevel = 'low';
+                updateQualitySettings();
+                showDetailedNotification('Auto Quality: Low', '⚡ Maximum optimization for stability');
+            }
+        }
+        
+        // Auto-upgrade quality if performance is good
+        if (fps > 55 && qualityLevel === 'low' && !batteryMode) {
+            qualityLevel = 'medium';
+            updateQualitySettings();
+            showDetailedNotification('Auto Quality: Medium', '✨ Performance improved - upgrading quality');
+        } else if (fps > 58 && qualityLevel === 'medium' && !batteryMode) {
+            qualityLevel = 'high';
+            updateQualitySettings();
+            showDetailedNotification('Auto Quality: High', '✨ Excellent performance - upgrading quality');
+        }
+        
+        // Battery mode performance optimization
+        if (batteryMode && fps < 30 && qualityLevel !== 'low') {
+            qualityLevel = 'low';
+            updateQualitySettings();
+            showDetailedNotification('Battery Mode: Quality Reduced', '🔋 Optimizing for battery life');
+        }
     }
 }
 
@@ -261,103 +319,93 @@ const vertexShader = `
 
 // --- Shader Code (Performance Optimized) ---
 const volumetric_atmosphere_code = `
-    // Highly optimized atmospheric scattering
+    // Optimized atmospheric scattering
     vec3 rayleigh_scattering(float cosTheta) {
-        float phase = 1.0 + cosTheta * cosTheta;
-        return vec3(0.58, 1.35, 3.31) * phase * 0.03; // Reduced intensity
+        return vec3(0.58, 1.35, 3.31) * (1.0 + cosTheta * cosTheta) * 0.06;
     }
-
+    
     vec3 mie_scattering(float cosTheta, float g) {
         float g2 = g * g;
-        float phase = (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
-        return vec3(0.4) * phase;
+        float num = (1.0 - g2);
+        float denom = pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
+        return vec3(0.4) * num / denom;
     }
-
-    // Faster noise function using precomputed values
+    
+    // Optimized noise function
     float noise3D(vec3 p) {
-        vec3 p0 = fract(p * 0.1031);
-        p0 += dot(p0, p0.yzx + 33.33);
-        return fract((p0.x + p0.y) * p0.z);
+        p = fract(p * 0.1031);
+        p += dot(p, p.yzx + 33.33);
+        return fract((p.x + p.y) * p.z);
     }
-
-    // Unrolled FBM for better performance (max 4 octaves)
+    
+    // Much faster FBM with fewer octaves
     float fbm(vec3 p, int octaves) {
         float value = 0.0;
-        float amp = 0.5;
-        float freq = 1.0;
-
-        // Unroll loops for better GPU performance
-        if (octaves >= 1) {
-            value += noise3D(p * freq) * amp;
-            freq *= 2.0; amp *= 0.5;
+        float amplitude = 0.5;
+        float frequency = 1.0;
+        
+        // Limit to maximum 4 octaves for performance
+        int maxOctaves = min(octaves, 4);
+        
+        for (int i = 0; i < 4; i++) {
+            if (i >= maxOctaves) break;
+            value += noise3D(p * frequency) * amplitude;
+            frequency *= 2.0;
+            amplitude *= 0.5;
         }
-        if (octaves >= 2) {
-            value += noise3D(p * freq) * amp;
-            freq *= 2.0; amp *= 0.5;
-        }
-        if (octaves >= 3) {
-            value += noise3D(p * freq) * amp;
-            freq *= 2.0; amp *= 0.5;
-        }
-        if (octaves >= 4) {
-            value += noise3D(p * freq) * amp;
-        }
-
         return value;
     }
     
     vec4 get_volumetric_atmosphere(vec2 uv, vec3 rayDir, float time) {
         vec3 sunDir = normalize(vec3(sin(time * 0.1), 0.8, cos(time * 0.1)));
         float cosTheta = dot(rayDir, sunDir);
-
-        // Optimized atmospheric density calculation
+        
+        // Simplified atmospheric density
         float altitude = rayDir.y * 0.5 + 0.5;
-        float density = exp(-altitude * 2.0); // Reduced multiplier for performance
-
-        // Simplified cloud calculation
-        vec3 cloudPos = rayDir * 50.0 + vec3(time * 1.2, time * 0.2, time * 0.8);
-        float cloud = 0.0;
-
-        // Quality-based cloud calculation
-        if (detail_level >= 0.6) {
-            cloud = fbm(cloudPos * 0.02, detail_level >= 1.0 ? 3 : 2);
-            cloud = smoothstep(0.3, 0.7, cloud);
+        float density = exp(-altitude * 3.0);
+        
+        // Single optimized cloud layer instead of 3
+        vec3 cloudPos = rayDir * 60.0 + vec3(time * 1.5, time * 0.3, time * 1.0);
+        float cloud = fbm(cloudPos * 0.015, 3); // Reduced from 6 octaves
+        cloud = smoothstep(0.4, 0.8, cloud);
+        
+        // Optional second layer only for ultra quality
+        float cloud2 = 0.0;
+        if (detail_level > 1.0) {
+            vec3 cloudPos2 = rayDir * 90.0 + vec3(time * -1.0, time * 0.2, time * 1.5);
+            cloud2 = fbm(cloudPos2 * 0.01, 2); // Reduced from 5 octaves
+            cloud2 = smoothstep(0.5, 0.9, cloud2) * 0.3;
         }
-
-        // Ultra quality gets additional cloud layer
-        if (detail_level >= 1.2) {
-            vec3 cloudPos2 = rayDir * 80.0 + vec3(time * -0.8, time * 0.1, time * 1.2);
-            float cloud2 = fbm(cloudPos2 * 0.015, 2);
-            cloud += smoothstep(0.4, 0.8, cloud2) * 0.4;
+        
+        float totalCloud = cloud + cloud2;
+        
+        // Simplified scattering
+        vec3 rayleigh = rayleigh_scattering(cosTheta);
+        vec3 mie = mie_scattering(cosTheta, 0.76);
+        
+        // Simplified atmospheric coloring
+        vec3 horizonColor = vec3(1.0, 0.5, 0.2) * (1.0 - altitude);
+        vec3 zenithColor = vec3(0.2, 0.4, 0.9) * altitude;
+        vec3 skyColor = mix(horizonColor, zenithColor, altitude);
+        
+        // Simplified sun disk
+        float sunIntensity = max(0.0, 1.0 - distance(rayDir.xy, sunDir.xy) * 25.0);
+        vec3 sunColor = vec3(1.0, 0.9, 0.7) * sunIntensity * 10.0;
+        
+        // Combine effects more efficiently
+        vec3 scatteredLight = rayleigh * skyColor;
+        vec3 cloudColor = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.7, 0.4), sunIntensity);
+        
+        vec3 finalColor = scatteredLight + sunColor;
+        finalColor = mix(finalColor, cloudColor, totalCloud * density);
+        
+        // Simplified god rays
+        if (detail_level > 1.0) {
+            float godRays = pow(max(0.0, cosTheta), 6.0) * totalCloud * 0.3;
+            finalColor += vec3(1.0, 0.8, 0.6) * godRays;
         }
-
-        // Simplified sky color calculation
-        vec3 skyColor = mix(
-            vec3(1.0, 0.6, 0.3) * (1.0 - altitude), // Horizon
-            vec3(0.3, 0.5, 1.0) * altitude,          // Zenith
-            altitude
-        );
-
-        // Simplified sun disk (only for higher quality)
-        vec3 sunColor = vec3(0.0);
-        if (detail_level >= 0.8) {
-            float sunIntensity = max(0.0, 1.0 - distance(rayDir.xy, sunDir.xy) * 20.0);
-            sunColor = vec3(1.0, 0.9, 0.8) * sunIntensity * 8.0;
-        }
-
-        // Simplified scattering (only for ultra quality)
-        vec3 scatteredLight = vec3(0.0);
-        if (detail_level >= 1.2) {
-            scatteredLight = rayleigh_scattering(cosTheta) * skyColor * 0.5;
-        }
-
-        // Combine colors efficiently
-        vec3 cloudColor = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.8, 0.5), max(0.0, cosTheta));
-        vec3 finalColor = skyColor + sunColor + scatteredLight;
-        finalColor = mix(finalColor, cloudColor, cloud * density);
-
-        // Simplified alpha calculation
-        float alpha = density * (0.15 + cloud * 0.4);
+        
+        float alpha = density * (0.2 + totalCloud * 0.5);
         return vec4(finalColor, alpha);
     }
 `;
@@ -394,96 +442,87 @@ const tunnel_shader_code = `
 
 const singularity_shader_code = `
 vec4 get_singularity_color(vec2 fragCoord, vec2 resolution, float time) {
-    vec2 p = (fragCoord + fragCoord - resolution) / resolution.y / 0.7;
-    vec2 d = vec2(-1,1);
     float i = 0.2, a;
-
-    vec2 b = p - i*d;
-    vec2 c = p * mat2(1, 1, d/(0.1 + i/dot(b,b)));
-    vec2 v = c * mat2(cos(0.5*log(a=dot(c,c)) + time*i + vec4(0,33,11,0)))/i;
-    vec2 w = vec2(0.0);
-
-    // Quality-based iteration count
-    float maxIter = detail_level >= 1.0 ? 7.0 : detail_level >= 0.6 ? 5.0 : 3.0;
-
-    for(float iter = 0.0; iter < 7.0; iter++) {
-        if (iter >= maxIter) break;
-        w += 1.0 + sin(v);
-        v += 0.7 * sin(v.yx * i + time) / i + 0.5;
-        i += 0.1;
+    vec2 r = resolution,
+         p = (fragCoord + fragCoord - r) / r.y / 0.7,
+         d = vec2(-1,1),
+         b = p - i*d,
+         c = p * mat2(1, 1, d/(0.1 + i/dot(b,b))),
+         v = c * mat2(cos(0.5*log(a=dot(c,c)) + time*i + vec4(0,33,11,0)))/i,
+         w;
+    
+    for(; i<9.0; i++) {
+        w += 1.0+sin(v);
+        v += 0.7* sin(v.yx*i+time) / i + 0.5;
     }
-
-    float dist = length(sin(v/0.3)*0.4 + c*(3.0+d));
-
-    vec4 O = 1.0 - exp(-exp(c.x * vec4(0.6,-0.4,-1.0,0))
+    
+    i = length( sin(v/0.3)*0.4 + c*(3.0+d) );
+    
+    vec4 O = 1.0 - exp( -exp( c.x * vec4(0.6,-0.4,-1.0,0) )
                    / w.xyyx
-                   / (2.0 + dist*dist/4.0 - dist)
-                   / (0.5 + 1.0 / a)
-                   / (0.03 + abs(length(p)-0.7))
+                   / ( 2.0 + i*i/4.0 - i )
+                   / ( 0.5 + 1.0 / a )
+                   / ( 0.03 + abs( length(p)-0.7 ) )
              );
-
+    
     vec4 result = O;
-
+    
     // Ultra quality: Add volumetric atmospheric effects around singularity
     if (detail_level >= 1.2) {
         vec3 rayDir = normalize(vec3(p, 0.8));
         vec4 atmosphere = get_volumetric_atmosphere(p, rayDir, time);
-
-        // Simplified accretion disk effects
+        
+        // Add accretion disk effects
         float diskDist = length(p);
-        float diskEffect = exp(-diskDist * 2.0) * 0.2;
+        float diskEffect = exp(-diskDist * 1.5) * 0.3;
         atmosphere.rgb *= (1.0 + diskEffect);
-
-        result = mix(result, atmosphere, atmosphere.a * 0.2);
+        
+        result = mix(result, atmosphere, atmosphere.a * 0.25);
     }
-
+    
     return result;
 }
 `;
 
 const transition_shader_code = `
+    // 'Warp Speed 2' by David Hoskins 2015.
+    // Adapted for Three.js
     vec4 get_transition_color(vec2 fragCoord, vec2 resolution, float time) {
+        float s = 0.0, v = 0.0;
         vec2 uv = (fragCoord / resolution) * 2.0 - 1.0;
-        float t = (time - 2.0) * 45.0; // Reduced speed for performance
+        float t = (time - 2.0) * 58.0;
         vec3 col = vec3(0.0);
         vec3 init = vec3(sin(t * 0.0032) * 0.3, 0.35 - cos(t * 0.005) * 0.3, t * 0.002);
-
-        // Quality-based outer loop count
-        int maxR = detail_level >= 1.0 ? 60 : detail_level >= 0.6 ? 40 : 25;
-        float stepSize = detail_level >= 1.0 ? 0.025 : 0.035; // Larger steps for lower quality
-
-        for (int r = 0; r < 60; r++) {
-            if (r >= maxR) break;
-
-            vec3 p = init + float(r) * stepSize * vec3(uv, 0.05);
+        for (int r = 0; r < 100; r++) 
+        {
+            vec3 p = init + s * vec3(uv, 0.05);
             p.z = fract(p.z);
-
-            // Quality-based inner loop count
-            int maxI = detail_level >= 1.0 ? 8 : detail_level >= 0.6 ? 6 : 4;
-
-            for (int i = 0; i < 8; i++) {
-                if (i >= maxI) break;
+            for (int i = 0; i < 10; i++) {
                 p = abs(p * 2.04) / dot(p, p) - 0.9;
             }
-
-            float v = pow(dot(p, p), 0.7) * 0.06;
+            v += pow(dot(p, p), 0.7) * 0.06;
             col += vec3(v) * 0.00003;
+            s += 0.025;
         }
-
-        vec4 result = tanh(vec4(col, 1.0) / 25.0 / length(uv));
-
+        
+        vec4 result = tanh(vec4(col, 1.0) / 30.0 / length(uv));
+        
         // Ultra quality: Add volumetric warp effects
         if (detail_level >= 1.2) {
             vec3 rayDir = normalize(vec3(uv, 0.4));
             vec4 atmosphere = get_volumetric_atmosphere(uv, rayDir, time);
-
-            // Simplified warp effects
-            float warpStrength = length(col) * 0.03;
+            
+            // Add warp effects
+            float warpStrength = length(col) * 0.05;
             atmosphere.rgb *= (1.0 + warpStrength);
-
-            result = mix(result, atmosphere, atmosphere.a * 0.3);
+            
+            // Add warp rays
+            vec3 warpRays = vec3(1.0, 0.9, 0.95) * warpStrength;
+            atmosphere.rgb += warpRays;
+            
+            result = mix(result, atmosphere, atmosphere.a * 0.4);
         }
-
+        
         return result;
     }
 `;
@@ -594,15 +633,14 @@ function main() {
     animate(0);
 }
 
- 
-
 function init(fragmentShader) {
     renderer = new THREE.WebGLRenderer({ 
-        antialias: !isMobile,
+        antialias: !isMobile, // Disable antialiasing on mobile for performance
         powerPreference: batteryMode ? "low-power" : "high-performance"
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     
+    // Adjust pixel ratio for mobile
     const pixelRatio = isMobile ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio;
     renderer.setPixelRatio(pixelRatio);
     
@@ -650,8 +688,39 @@ function init(fragmentShader) {
             updateQualitySettings();
         }
     }).name('🔋 Battery Mode');
-    
-    
+
+    // Mobile instructions
+    if (isMobile) {
+        const instructions = document.createElement('div');
+        instructions.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        `;
+            
+        instructions.innerHTML = `
+            📱 Touch Controls:<br>
+            ↕️ Swipe up: Transform<br>
+            👆👆 Double tap: Cycle quality (includes Ultra!)<br>
+            🌫️ Ultra mode: Full volumetric atmosphere
+        `;
+        document.body.appendChild(instructions);
+        
+        // Hide instructions after 8 seconds
+        setTimeout(() => {
+            instructions.style.opacity = '0';
+            setTimeout(() => instructions.remove(), 500);
+        }, 8000);
+    }
 
     window.addEventListener('resize', onWindowResize, false);
 }
@@ -665,7 +734,7 @@ function onWindowResize() {
 function animate(timestamp) {
     requestAnimationFrame(animate);
     
-    // Update FPS monitoring (no auto-adjust)
+    // Update FPS monitoring
     updateFPS(timestamp);
     
     // Adaptive frame rate limiting for better performance
