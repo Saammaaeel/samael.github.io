@@ -2,13 +2,15 @@
  * ============================================================================
  * COSMIC EXPLORER - Into The Unknown
  * ============================================================================
- * A high-performance WebGL cosmic visualization
+ * A high-performance WebGL cosmic visualization with AI-powered education
  * 
  * Features:
  * - Ultra quality volumetric atmospheric effects
  * - Adaptive performance optimization (auto-quality adjustment)
+ * - Secure Hugging Face AI integration via serverless API
  * - Mobile-optimized touch controls
  * - Real-time shader transformations between tunnel/singularity effects
+ * - Educational cosmic facts with physics explanations
  * 
  * Performance Optimizations:
  * - Reduced shader iterations (75 max vs 150)
@@ -42,6 +44,85 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isSwipeDetected = false;
 
+// --- Educational Content Variables ---
+let educationalPanel = null;
+let currentFactIndex = 0;
+let isLoadingFact = false;
+let factCache = new Map();
+
+// --- AI Configuration & Integration ---
+const AI_CONFIG = {
+    // Secure API endpoint (deployed separately on Vercel/Netlify)
+    // Update this URL when you deploy your serverless function
+    serverlessEndpoint: 'https://cosmic-wanderer-eosin.vercel.app/api/generate-fact', // CHANGE THIS TO YOUR DEPLOYED URL
+    
+    // Alternative: Auto-detect based on current domain
+    // serverlessEndpoint: window.location.hostname.includes('github.io') 
+    //     ? 'https://your-cosmic-api.vercel.app/api/generate-fact'  // Production API
+    //     : '/api/generate-fact',  // Local development
+    
+    // Mode selection: 'api' for serverless only, 'hybrid' for API + static fallback
+    mode: 'hybrid', 
+    
+    // Status tracking
+    apiStatus: {
+        lastAttempt: null,
+        isWorking: false,
+        errorCount: 0,
+        usingFallback: false,
+        hasServerlessAPI: false
+    },
+    
+    // Rate limiting for API calls (OpenRouter has generous limits)
+    rateLimit: {
+        maxCallsPerMinute: 20, // Increased for OpenRouter
+        callHistory: [],
+        lastReset: Date.now()
+    },
+    
+    // CORS handling for cross-origin requests (GitHub Pages -> Vercel API)
+    corsMode: 'cors',
+    credentials: 'omit',  // Don't send cookies cross-origin
+    
+    // OpenRouter configuration
+    timeout: 30000, // Increased to 30 seconds for OpenRouter's slower models
+    retryAttempts: 2,
+    
+    // Topics for AI fact generation
+    cosmicTopics: [
+        'black holes and event horizons',
+        'neutron stars and pulsars', 
+        'dark matter and dark energy',
+        'exoplanets and habitable zones',
+        'supernovas and stellar evolution',
+        'galaxy formation and cosmic structure',
+        'quantum mechanics in space',
+        'time dilation and relativity',
+        'cosmic microwave background radiation',
+        'wormholes and theoretical physics',
+        'asteroid belts and planetary formation',
+        'magnetospheres and space weather',
+        'cosmic rays and particle physics',
+        'red giants and white dwarfs',
+        'gravitational waves and spacetime',
+        'the multiverse theory',
+        'cosmic inflation and the Big Bang',
+        'quasars and active galactic nuclei',
+        'solar wind and heliosphere',
+        'planetary rings and moons',
+        'stellar nurseries and nebulae',
+        'cosmic microwave background',
+        'Hawking radiation',
+        'solar system formation',
+        'galactic collisions',
+        'cosmic strings',
+        'vacuum decay',
+        'parallel universes',
+        'antimatter mysteries',
+        'quantum entanglement in space'
+    ]
+};
+
 // --- Shader Uniforms ---
 const uniforms = {
     time: { value: 0.0 },
@@ -52,6 +133,44 @@ const uniforms = {
     iteration_count: { value: 100.0 },
     detail_level: { value: 1.0 }
 };
+
+// =============================================================================
+// EDUCATIONAL CONTENT DATA
+// =============================================================================
+
+// --- Educational Content Data ---
+const cosmicFacts = [
+    {
+        title: "Black Holes",
+        content: "Black holes are regions of spacetime where gravity is so strong that nothing, not even light, can escape once it crosses the event horizon.",
+        physics: "The visualization shows how matter spirals into a black hole, creating an accretion disk that glows from intense heat and friction. In Ultra mode, volumetric atmospheric effects simulate the superheated plasma and gas clouds surrounding these cosmic monsters."
+    },
+    {
+        title: "Wormholes",
+        content: "Theoretical passages through spacetime that could create shortcuts between distant regions of the universe.",
+        physics: "The tunnel effect demonstrates how spacetime might bend to connect two distant points, as predicted by Einstein's general relativity. Ultra quality adds realistic atmospheric scattering to show how light would behave in such exotic spacetime geometries."
+    },
+    {
+        title: "Gravitational Lensing",
+        content: "Massive objects bend light around them, creating distorted or multiple images of distant objects.",
+        physics: "The warping effects you see represent how gravity curves spacetime, affecting the path of light rays. The enhanced atmospheric effects in Ultra mode show how interstellar medium would be affected by these gravitational fields."
+    },
+    {
+        title: "Cosmic Microwave Background",
+        content: "The afterglow of the Big Bang, visible throughout the universe as faint radiation.",
+        physics: "The chaotic patterns represent quantum fluctuations from the early universe that eventually formed galaxies and stars. Ultra mode's volumetric clouds simulate the primordial plasma that filled the early cosmos."
+    },
+    {
+        title: "Dark Matter",
+        content: "Invisible matter that makes up about 27% of the universe, only detectable through its gravitational effects.",
+        physics: "The invisible forces shaping the visual patterns represent how dark matter influences the structure of the cosmos. The atmospheric effects in Ultra quality visualize how dark matter might interact with the cosmic web of matter and energy."
+    },
+    {
+        title: "Atmospheric Scattering",
+        content: "The physics behind why we see blue skies and red sunsets - light scattering off particles in the atmosphere.",
+        physics: "Ultra mode implements real Rayleigh and Mie scattering equations, the same physics that creates Earth's sky colors. Blue light scatters more than red, creating the spectacular atmospheric effects you see."
+    }
+];
 
 // =============================================================================
 // DEVICE DETECTION & PERFORMANCE
@@ -154,9 +273,24 @@ function setupTouchGestures() {
         if (distance > 50) { // Minimum swipe distance
             isSwipeDetected = true;
             
-            // Vertical swipe up - trigger transformation
-            if (Math.abs(deltaY) > Math.abs(deltaX) && deltaY < 0) {
-                triggerTransformation();
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal swipe
+                if (deltaX > 0) {
+                    // Swipe right - next fact
+                    showNextFact();
+                } else {
+                    // Swipe left - previous fact
+                    showPreviousFact();
+                }
+            } else {
+                // Vertical swipe
+                if (deltaY < 0) {
+                    // Swipe up - trigger transformation
+                    triggerTransformation();
+                } else {
+                    // Swipe down - toggle educational panel
+                    toggleEducationalPanel();
+                }
             }
         }
     }, { passive: false });
@@ -176,6 +310,246 @@ function setupTouchGestures() {
         }
         lastTap = currentTime;
     });
+}
+
+// --- Educational Panel Functions ---
+function createEducationalPanel() {
+    educationalPanel = document.createElement('div');
+    educationalPanel.id = 'educational-panel';
+    educationalPanel.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        max-width: 400px;
+        z-index: 1000;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    `;
+    
+    document.body.appendChild(educationalPanel);
+    updateEducationalContent();
+}
+
+// =============================================================================
+// AI FACT GENERATION & API INTEGRATION
+// =============================================================================
+
+// --- AI Fact Generation Functions ---
+async function generateCosmicFact(topic = null) {
+    if (isLoadingFact) return null;
+    
+    isLoadingFact = true;
+    showFactLoadingState();
+    
+    // Safety timeout to prevent getting stuck
+    const safetyTimeout = setTimeout(() => {
+        console.log('Safety timeout: Forcing end of loading state');
+        isLoadingFact = false;
+        hideFactLoadingState();
+        showDetailedNotification(
+            '⚠️ Generation Timeout', 
+            'Taking longer than expected. Using curated content instead.',
+            3000
+        );
+    }, 45000); // 45 second safety timeout
+    
+    try {
+        // Select random topic if none provided
+        if (!topic) {
+            topic = AI_CONFIG.cosmicTopics[Math.floor(Math.random() * AI_CONFIG.cosmicTopics.length)];
+        }
+        
+        console.log('Starting fact generation for topic:', topic);
+        
+        // Check cache first
+        if (factCache.has(topic)) {
+            console.log('Using cached fact for topic:', topic);
+            const cachedFact = factCache.get(topic);
+            clearTimeout(safetyTimeout);
+            isLoadingFact = false;
+            return cachedFact;
+        }
+        
+        // Generate prompt for cosmic fact
+        const prompt = createCosmicFactPrompt(topic);
+        console.log('Generated prompt, calling API...');
+        
+        // Try different free APIs
+        let fact = await tryGenerateWithFreeAPIs(prompt, topic);
+        
+        console.log('API response received:', fact ? 'Success' : 'Failed');
+        
+        if (fact) {
+            // Cache the generated fact
+            factCache.set(topic, fact);
+            clearTimeout(safetyTimeout);
+            console.log('Fact generated successfully:', fact.title);
+            return fact;
+        } else {
+            // Fallback to enhanced static facts
+            console.log('API failed, using enhanced static fact');
+            clearTimeout(safetyTimeout);
+            return generateEnhancedStaticFact(topic);
+        }
+        
+    } catch (error) {
+        console.warn('AI fact generation failed, using enhanced static content:', error);
+        clearTimeout(safetyTimeout);
+        return generateEnhancedStaticFact(topic);
+    } finally {
+        isLoadingFact = false;
+        hideFactLoadingState();
+        clearTimeout(safetyTimeout);
+        console.log('Fact generation process completed');
+    }
+}
+
+function createCosmicFactPrompt(topic) {
+    return `Generate a fascinating space fact about ${topic}. 
+    Format: Title: [Short Title]
+    Content: [2-3 sentences of engaging description suitable for general audience]
+    Physics: [1-2 sentences explaining the scientific principles involved]
+    
+    Make it educational but captivating, suitable for a cosmic visualization app. Focus on real science.`;
+}
+
+// --- Enhanced Educational Panel Functions ---
+async function generateNewFact() {
+    if (isLoadingFact) {
+        console.log('Already loading a fact, ignoring new request');
+        return;
+    }
+    
+    const newFact = await generateCosmicFact();
+    if (newFact) {
+        // Add to the beginning of the facts array
+        cosmicFacts.unshift(newFact);
+        currentFactIndex = 0;
+        updateEducationalContent();
+        
+        if (educationalPanel.style.transform !== 'translateY(0px)') {
+            toggleEducationalPanel();
+        }
+    }
+}
+
+// Force refresh function if generation gets stuck
+function forceRefreshFacts() {
+    console.log('Force refreshing fact generation system');
+    
+    // Reset all loading states
+    isLoadingFact = false;
+    hideFactLoadingState();
+    
+    // Reset API status
+    AI_CONFIG.apiStatus.errorCount = 0;
+    AI_CONFIG.apiStatus.usingFallback = false;
+    
+    // Show current fact or generate new one
+    updateEducationalContent();
+    
+    showDetailedNotification(
+        '🔄 System Refreshed', 
+        'Fact generation system has been reset.\nTry generating a new fact now!',
+        3000
+    );
+}
+
+function updateEducationalContent() {
+    if (!educationalPanel || isLoadingFact) return;
+    
+    const fact = cosmicFacts[currentFactIndex];
+    const isPremiumAI = fact.source && fact.source.includes('OpenRouter');
+    const isCurated = !fact.source || fact.source.includes('Curated') || fact.source.includes('Enhanced Static');
+    
+    let sourceLabel = '';
+    if (isPremiumAI) {
+        sourceLabel = '<span style="font-size: 12px; background: rgba(255,215,0,0.2); padding: 2px 6px; border-radius: 10px; color: #FFD700;">⭐ Premium AI</span>';
+    } else if (isCurated) {
+        sourceLabel = '<span style="font-size: 12px; background: rgba(129,199,132,0.2); padding: 2px 6px; border-radius: 10px; color: #81c784;">📚 Curated</span>';
+    }
+    
+    const statusText = AI_CONFIG.apiStatus.hasServerlessAPI 
+        ? 'Premium AI + Curated content' 
+        : 'Curated content available';
+    
+    educationalPanel.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; color: #64b5f6;">${fact.title}</h3>
+            ${sourceLabel}
+        </div>
+        <p style="margin: 0 0 15px 0; line-height: 1.5;">${fact.content}</p>
+        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
+            <h4 style="margin: 0 0 8px 0; color: #81c784;">Physics Explanation:</h4>
+            <p style="margin: 0; line-height: 1.4; font-size: 0.9em;">${fact.physics}</p>
+        </div>
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.8em; color: #bbb;">
+                    ${currentFactIndex + 1} / ${cosmicFacts.length} facts
+                </div>
+                <button onclick="generateNewFact()" style="
+                    background: linear-gradient(45deg, #64b5f6, #81c784);
+                    border: none;
+                    padding: 5px 12px;
+                    border-radius: 15px;
+                    color: white;
+                    font-size: 11px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    margin-right: 5px;
+                ">⭐ Generate Premium Fact</button>
+                <button onclick="forceRefreshFacts()" style="
+                    background: linear-gradient(45deg, #ff9800, #f57c00);
+                    border: none;
+                    padding: 5px 10px;
+                    border-radius: 15px;
+                    color: white;
+                    font-size: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">🔄 Refresh</button>
+            </div>
+            <div style="margin-top: 8px; text-align: center; font-size: 0.7em; color: #888;">
+                Swipe left/right for more • ${statusText}
+            </div>
+        </div>
+    `;
+}
+
+// Make generateNewFact available globally
+window.generateNewFact = generateNewFact;
+window.forceRefreshFacts = forceRefreshFacts;
+
+function toggleEducationalPanel() {
+    if (!educationalPanel) return;
+    
+    const isVisible = educationalPanel.style.transform === 'translateY(0px)';
+    educationalPanel.style.transform = isVisible ? 'translateY(-100%)' : 'translateY(0px)';
+}
+
+function showNextFact() {
+    currentFactIndex = (currentFactIndex + 1) % cosmicFacts.length;
+    updateEducationalContent();
+    if (educationalPanel.style.transform !== 'translateY(0px)') {
+        toggleEducationalPanel();
+    }
+}
+
+function showPreviousFact() {
+    currentFactIndex = (currentFactIndex - 1 + cosmicFacts.length) % cosmicFacts.length;
+    updateEducationalContent();
+    if (educationalPanel.style.transform !== 'translateY(0px)') {
+        toggleEducationalPanel();
+    }
 }
 
 function cycleQuality() {
@@ -629,8 +1003,366 @@ function main() {
         setupTouchGestures();
     }
     
+    // Create educational panel
+    createEducationalPanel();
+    
+    // Initialize AI features
+    initializeAIFeatures();
+    
     // --- Start Animation Loop ---
     animate(0);
+}
+
+// --- AI Initialization ---
+async function initializeAIFeatures() {
+    // Check if serverless API is available
+    const hasAPI = await checkServerlessAPIAvailability();
+    
+    let welcomeMessage = '🚀 Welcome to Cosmic Explorer!';
+    let detailMessage = '🌌 Journey through space with Ultra visuals\n';
+    
+    if (hasAPI) {
+        detailMessage += '⭐ PREMIUM: Secure OpenRouter AI integration\n📡 Real AI-powered cosmic education (Moonshot AI Kimi K2)\n🔒 API keys safely secured on server\n📚 Generate unlimited space facts\n✨ Premium AI + curated content\n';
+        AI_CONFIG.mode = 'hybrid';
+    } else {
+        detailMessage += '📚 CURATED: High-quality space facts\n🔬 Scientifically accurate content\n✨ No internet required\n📖 Expertly crafted educational content\n';
+        AI_CONFIG.mode = 'hybrid';
+    }
+    
+    detailMessage += '\nSwipe down or use the Education panel to explore!';
+    
+    // Show welcome message about AI features
+    setTimeout(() => {
+        showDetailedNotification(welcomeMessage, detailMessage, 8000);
+    }, 3000);
+    
+    // Initialize AI system
+    setTimeout(() => {
+        initializeAISystem();
+    }, 5000);
+}
+
+async function initializeAISystem() {
+    // Test API generation
+    if (AI_CONFIG.apiStatus.hasServerlessAPI) {
+        const testTopics = ['black holes and event horizons', 'neutron stars and pulsars'];
+        
+        let apiCount = 0;
+        
+        for (const topic of testTopics) {
+            try {
+                const fact = await generateCosmicFact(topic);
+                if (fact && fact.source.includes('OpenRouter')) {
+                    apiCount++;
+                }
+                // Small delay between generations
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                // Silent fail for initialization test
+            }
+        }
+        
+        // Report initialization results
+        if (apiCount > 0) {
+            AI_CONFIG.apiStatus.isWorking = true;
+            showDetailedNotification(
+                '⭐ Premium AI Ready!', 
+                `✅ Secure OpenRouter API integration\n🔒 Your API key is safely secured\n📡 Real AI language model active (Moonshot AI Kimi K2)\n⚡ Premium fact generation ready\n📚 High-quality curated content available\n⏱️ Response time: 15-30 seconds`,
+                4000
+            );
+        } else {
+            showDetailedNotification(
+                '📚 Cosmic Facts Ready!', 
+                `🔬 High-quality curated content\n📖 Expertly crafted space facts\n⚡ Instant access to cosmic knowledge`,
+                3000
+            );
+        }
+    } else {
+        showDetailedNotification(
+            '📚 Cosmic Facts Ready!', 
+            `🔬 High-quality curated content\n📖 Expertly crafted space facts\n⚡ Instant access to cosmic knowledge`,
+            3000
+        );
+    }
+}
+
+// Enhanced API integration with secure serverless endpoint
+async function tryGenerateWithFreeAPIs(prompt, topic) {
+    // Update API status
+    AI_CONFIG.apiStatus.lastAttempt = new Date().toISOString();
+    
+    try {
+        // Check rate limiting
+        if (!checkRateLimit()) {
+            return generateEnhancedStaticFact(topic);
+        }
+        
+        // Try serverless API first if available and mode allows
+        if ((AI_CONFIG.mode === 'api' || AI_CONFIG.mode === 'hybrid') && AI_CONFIG.apiStatus.errorCount < 5) {
+            const apiResult = await callServerlessAPI(topic);
+            if (apiResult) {
+                AI_CONFIG.apiStatus.isWorking = true;
+                AI_CONFIG.apiStatus.usingFallback = false;
+                AI_CONFIG.apiStatus.hasServerlessAPI = true;
+                AI_CONFIG.apiStatus.errorCount = 0; // Reset error count on success
+                return apiResult;
+            }
+        }
+        
+        // Fallback to enhanced static facts
+        AI_CONFIG.apiStatus.usingFallback = true;
+        return generateEnhancedStaticFact(topic);
+        
+    } catch (error) {
+        AI_CONFIG.apiStatus.errorCount++;
+        return generateEnhancedStaticFact(topic);
+    }
+}
+
+// Secure serverless API call - updated for OpenRouter with retry logic
+async function callServerlessAPI(topic, attempt = 1) {
+    try {
+        console.log(`OpenRouter API call attempt ${attempt} for topic:`, topic);
+        
+        const response = await fetch(AI_CONFIG.serverlessEndpoint, {
+            method: 'POST',
+            mode: AI_CONFIG.corsMode, // 'cors' for cross-origin requests
+            credentials: AI_CONFIG.credentials, // 'omit' for security
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                // Add origin header for CORS
+                'Origin': window.location.origin
+            },
+            body: JSON.stringify({ topic }),
+            // Updated timeout for OpenRouter (some models can be slower)
+            signal: AbortSignal.timeout(AI_CONFIG.timeout) // 30 second timeout
+        });
+        
+        console.log('OpenRouter API response status:', response.status);
+        
+        if (!response.ok) {
+            // Handle different HTTP error codes
+            if (response.status === 429) {
+                throw new Error('Rate limit exceeded - please wait before generating more facts');
+            } else if (response.status >= 500) {
+                throw new Error('Server error - OpenRouter API temporarily unavailable');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        }
+        
+        const result = await response.json();
+        console.log('OpenRouter API result:', result);
+        
+        if (result.success && result.fact) {
+            // Track successful API call
+            trackAPICall();
+            
+            console.log('Successfully parsed OpenRouter response:', result.fact.title);
+            
+            return {
+                title: result.fact.title,
+                content: result.fact.content,
+                physics: result.fact.physics,
+                source: `OpenRouter AI (${result.metadata?.model || 'Moonshot AI Kimi K2'})`,
+                timestamp: new Date().toISOString(),
+                quality: 'premium',
+                generationTime: result.metadata?.tokens_used || 'N/A'
+            };
+        } else if (result.fallback) {
+            // Server suggests using fallback
+            console.log('Server suggested fallback, debug info:', result.debug);
+            throw new Error('Server suggested fallback');
+        } else {
+            console.log('Invalid response format:', result);
+            throw new Error('Invalid response format');
+        }
+        
+    } catch (error) {
+        // Handle timeout specifically
+        if (error.name === 'TimeoutError' || error.message.includes('timed out')) {
+            console.log(`OpenRouter timeout on attempt ${attempt}:`, error.message);
+            if (attempt < AI_CONFIG.retryAttempts) {
+                console.log(`OpenRouter timeout (attempt ${attempt}), retrying...`);
+                // Show user that we're retrying
+                showFactLoadingStateWithRetry(attempt);
+                return await callServerlessAPI(topic, attempt + 1);
+            } else {
+                console.log('OpenRouter API timeout after retries - using fallback content');
+                AI_CONFIG.apiStatus.errorCount++;
+                return null;
+            }
+        }
+        
+        console.log('OpenRouter API Error:', error.message); // Keep essential error logging
+        AI_CONFIG.apiStatus.errorCount++;
+        
+        // Handle specific error types
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+            AI_CONFIG.apiStatus.hasServerlessAPI = false;
+        } else if (error.message.includes('CORS')) {
+            AI_CONFIG.apiStatus.hasServerlessAPI = false;
+        }
+        
+        // Retry on server errors (but not on client errors)
+        if (error.message.includes('Server error') && attempt < AI_CONFIG.retryAttempts) {
+            console.log(`Server error (attempt ${attempt}), retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            return await callServerlessAPI(topic, attempt + 1);
+        }
+        
+        return null;
+    }
+}
+
+// Rate limiting functions
+function checkRateLimit() {
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    
+    // Reset if more than a minute has passed
+    if (now - AI_CONFIG.rateLimit.lastReset > 60000) {
+        AI_CONFIG.rateLimit.callHistory = [];
+        AI_CONFIG.rateLimit.lastReset = now;
+    }
+    
+    // Remove old calls
+    AI_CONFIG.rateLimit.callHistory = AI_CONFIG.rateLimit.callHistory.filter(
+        timestamp => timestamp > oneMinuteAgo
+    );
+    
+    // Check if under limit
+    return AI_CONFIG.rateLimit.callHistory.length < AI_CONFIG.rateLimit.maxCallsPerMinute;
+}
+
+function trackAPICall() {
+    AI_CONFIG.rateLimit.callHistory.push(Date.now());
+}
+
+// Enhanced server connectivity check
+async function checkServerlessAPIAvailability() {
+    try {
+        const response = await fetch(AI_CONFIG.serverlessEndpoint, {
+            method: 'OPTIONS', // Pre-flight check
+            signal: AbortSignal.timeout(5000)
+        });
+        
+        AI_CONFIG.apiStatus.hasServerlessAPI = response.ok;
+        return response.ok;
+    } catch (error) {
+        AI_CONFIG.apiStatus.hasServerlessAPI = false;
+        return false;
+    }
+}
+
+function generateEnhancedStaticFact(topic) {
+    // Simplified static fact generation
+    const factTemplates = {
+        'black holes': {
+            title: 'Black Holes',
+            content: 'These cosmic vacuum cleaners can have masses up to billions of times our Sun, yet compress all that matter into regions smaller than our solar system. Their gravitational pull is so intense that time itself slows down near the event horizon.',
+            physics: 'General relativity predicts that massive objects warp spacetime, and black holes represent the extreme case where this curvature becomes so severe that escape velocity exceeds the speed of light.'
+        },
+        'neutron stars': {
+            title: 'Neutron Stars',
+            content: 'A neutron star\'s magnetic field can be a trillion times stronger than Earth\'s. These dense stellar remnants spin incredibly fast, some completing hundreds of rotations per second while being more massive than our Sun.',
+            physics: 'Neutron degeneracy pressure prevents further gravitational collapse, creating matter so dense that a teaspoon would weigh about 6 billion tons on Earth.'
+        },
+        'dark matter': {
+            title: 'Dark Matter',
+            content: 'Dark matter makes up 85% of all matter in the universe, yet we can\'t see it directly. It forms an invisible cosmic web that acts as scaffolding for galaxy formation and evolution.',
+            physics: 'Dark matter interacts gravitationally but not electromagnetically, making it detectable only through its gravitational effects on visible matter and light.'
+        },
+        'exoplanets': {
+            title: 'Exoplanets',
+            content: 'Over 5,000 exoplanets have been discovered, ranging from super-Earths to hot Jupiters. Some orbit in the habitable zone where liquid water could exist on their surfaces.',
+            physics: 'Planet detection relies on gravitational effects, transit photometry, and direct imaging, revealing the incredible diversity of planetary systems.'
+        },
+        'gravitational waves': {
+            title: 'Gravitational Waves',
+            content: 'LIGO detectors have confirmed Einstein\'s prediction by measuring distortions in spacetime caused by colliding black holes and neutron stars, opening a new window to observe the universe.',
+            physics: 'These waves carry energy at the speed of light, stretching and compressing space itself by amounts smaller than 1/10,000th the width of a proton.'
+        },
+        'supernovas': {
+            title: 'Supernovas',
+            content: 'Type Ia supernovas are so consistent in brightness that they serve as "standard candles" for measuring cosmic distances, helping us discover that the universe\'s expansion is accelerating.',
+            physics: 'Nuclear fusion chains create elements up to iron, while the supernova explosion itself forges heavier elements and disperses them throughout the galaxy.'
+        }
+    };
+    
+    // Find matching template or create generic one
+    for (const [key, template] of Object.entries(factTemplates)) {
+        if (topic.toLowerCase().includes(key)) {
+            return { ...template, source: 'Curated Content', timestamp: new Date().toISOString() };
+        }
+    }
+    
+    // Generic cosmic fact for unknown topics
+    const cosmicFact = {
+        title: formatTopicTitle(topic),
+        content: `${formatTopicTitle(topic)} represent some of the most extreme and fascinating phenomena in our universe, pushing the boundaries of our understanding of physics and challenging our perception of reality.`,
+        physics: "These cosmic phenomena operate under conditions so extreme that they serve as natural laboratories for testing the fundamental laws of physics in regimes impossible to recreate on Earth."
+    };
+    
+    return { ...cosmicFact, source: 'Curated Content', timestamp: new Date().toISOString() };
+}
+
+function formatTopicTitle(topic) {
+    return topic.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+function showFactLoadingState() {
+    if (!educationalPanel) return;
+    
+    educationalPanel.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⭐</div>
+            <h3 style="margin: 0 0 10px 0; color: #64b5f6;">Generating Premium Fact...</h3>
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                <div style="width: 0%; height: 100%; background: #64b5f6; border-radius: 2px; animation: loading 2s ease-in-out;" id="loading-bar"></div>
+            </div>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Calling secure OpenRouter API (Moonshot AI Kimi K2)...</p>
+            <p style="margin: 5px 0 0 0; font-size: 10px; color: #999;">This may take 15-30 seconds for high quality AI generation</p>
+        </div>
+        <style>
+            @keyframes loading {
+                0% { width: 0%; }
+                25% { width: 30%; }
+                50% { width: 60%; }
+                75% { width: 85%; }
+                100% { width: 100%; }
+            }
+        </style>
+    `;
+}
+
+function showFactLoadingStateWithRetry(attempt) {
+    if (!educationalPanel) return;
+
+    educationalPanel.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+            <h3 style="margin: 0 0 10px 0; color: #ff9800;">Retrying OpenRouter API (Attempt ${attempt})...</h3>
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                <div style="width: 0%; height: 100%; background: #ff9800; border-radius: 2px; animation: loading 1s ease-in-out;" id="loading-bar"></div>
+            </div>
+            <p style="margin: 15px 0 0 0; font-size: 12px; color: #ccc;">Attempting to connect to OpenRouter API...</p>
+        </div>
+        <style>
+            @keyframes loading {
+                0% { width: 0%; }
+                50% { width: 70%; }
+                100% { width: 100%; }
+            }
+        </style>
+    `;
+}
+
+function hideFactLoadingState() {
+    // This will be called when updateEducationalContent is called
 }
 
 function init(fragmentShader) {
@@ -688,8 +1420,92 @@ function init(fragmentShader) {
             updateQualitySettings();
         }
     }).name('🔋 Battery Mode');
+    
+    // Educational controls
+    const education_controls = {
+        showFacts: () => toggleEducationalPanel(),
+        nextFact: () => showNextFact(),
+        previousFact: () => showPreviousFact(),
+        generateAIFact: () => generateNewFact(),
+        clearAIFacts: () => {
+            // Remove AI-generated facts, keep original static ones
+            const originalFactsCount = 6; // Original static facts
+            if (cosmicFacts.length > originalFactsCount) {
+                cosmicFacts.splice(0, cosmicFacts.length - originalFactsCount);
+                currentFactIndex = 0;
+                updateEducationalContent();
+                showDetailedNotification('AI Facts Cleared', '🧹 Removed generated facts\n📚 Restored to original content');
+            }
+        },
+        forceRefresh: () => forceRefreshFacts()
+    };
+    
+    const eduFolder = gui.addFolder('📚 Cosmic Education');
+    eduFolder.add(education_controls, 'showFacts').name('Toggle Facts Panel');
+    eduFolder.add(education_controls, 'nextFact').name('Next Fact →');
+    eduFolder.add(education_controls, 'previousFact').name('← Previous Fact');
+    
+    // AI Controls subfolder
+    const aiFolder = eduFolder.addFolder('🤖 AI Generation');
+    aiFolder.add(education_controls, 'generateAIFact').name('Generate New Fact');
+    aiFolder.add(education_controls, 'clearAIFacts').name('Clear AI Facts');
+    aiFolder.add(education_controls, 'forceRefresh').name('Force Refresh Facts');
+    
+    // Add info about AI features
+    const aiInfo = {
+        about: () => {
+            let title, content;
+            
+            if (AI_CONFIG.apiStatus.hasServerlessAPI) {
+                title = '⭐ Premium OpenRouter AI System';
+                content = `⭐ Secure OpenRouter API integration
+🔒 API keys safely secured on server
+📡 Real AI language model - Moonshot AI Kimi K2
+🎯 High-quality fact generation (${AI_CONFIG.rateLimit.maxCallsPerMinute}/min limit)
+⏱️ Response time: 15-30 seconds per fact
+📚 Curated content backup
+🌟 Best cosmic education experience`;
+            } else {
+                title = '📚 Curated Content System';
+                content = `📖 High-quality curated space facts
+🔬 Scientifically accurate content
+⚡ Instant access - no waiting
+💾 Works completely offline
+🎯 Expert-crafted educational content
+🌟 Reliable cosmic knowledge`;
+            }
+            
+            showDetailedNotification(title, content, 7000);
+        },
+        
+        status: () => {
+            const status = AI_CONFIG.apiStatus;
+            const rateLimit = AI_CONFIG.rateLimit;
+            const remainingCalls = rateLimit.maxCallsPerMinute - rateLimit.callHistory.length;
+            
+            let statusText = `🔍 System Status:
+Mode: ${AI_CONFIG.mode.toUpperCase()}
+OpenRouter API: ${status.hasServerlessAPI ? '✅ Available' : '❌ Unavailable'}
+Error Count: ${status.errorCount}
+Using Fallback: ${status.usingFallback ? 'Yes (Curated Content)' : 'No'}
+Timeout Setting: ${AI_CONFIG.timeout / 1000}s
+Retry Attempts: ${AI_CONFIG.retryAttempts}`;
 
-    // Mobile instructions
+            if (status.hasServerlessAPI) {
+                statusText += `\nAPI Calls Remaining: ${remainingCalls}/${rateLimit.maxCallsPerMinute}`;
+            }
+            
+            showDetailedNotification('📊 System Status', statusText, 5000);
+        }
+    };
+    
+    aiFolder.add(aiInfo, 'about').name('ℹ️ About System');
+    aiFolder.add(aiInfo, 'status').name('📊 System Status');
+    
+    eduFolder.open();
+    aiFolder.open();
+
+    // Mobile instructions with simplified AI info
     if (isMobile) {
         const instructions = document.createElement('div');
         instructions.style.cssText = `
@@ -706,12 +1522,18 @@ function init(fragmentShader) {
             z-index: 1000;
             backdrop-filter: blur(5px);
         `;
+        
+        const aiModeText = AI_CONFIG.apiStatus.hasServerlessAPI 
+            ? '⭐ OpenRouter AI active!' 
+            : '📚 Curated content active!';
             
         instructions.innerHTML = `
             📱 Touch Controls:<br>
-            ↕️ Swipe up: Transform<br>
+            ↕️ Swipe up: Transform • Swipe down: Facts<br>
+            ↔️ Swipe left/right: Navigate facts<br>
             👆👆 Double tap: Cycle quality (includes Ultra!)<br>
-            🌫️ Ultra mode: Full volumetric atmosphere
+            🌫️ Ultra mode: Full volumetric atmosphere<br>
+            ${aiModeText}
         `;
         document.body.appendChild(instructions);
         
@@ -760,4 +1582,4 @@ function animate(timestamp) {
 }
 
 // --- Initialization ---
-main();
+main(); 
